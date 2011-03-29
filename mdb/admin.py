@@ -15,7 +15,7 @@ class HostAdmin(admin.ModelAdmin):
 			'fields' : ( 'owner', 'location', 'description' )
 		}),
 		('Hardware Information', {
-			'fields' : ( ('brand', 'model'), 'serial_number', 'host_type' )
+			'fields' : ( ('brand', 'model'), 'serial_number', ('hostname', 'host_type' ) )
 		}),
 		('Kerberos Information', {
 			'description' : 'If this host is a member of the LDAP domain, you need to tick the request kerberos principal checkbox. A principal will then be created for the host.',
