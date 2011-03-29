@@ -14,8 +14,9 @@ class HostAdmin(admin.ModelAdmin):
 		('Owner Information', {
 			'fields' : ( 'owner', 'location', 'description' )
 		}),
-		('Hardware Information', {
-			'fields' : ( ('brand', 'model'), 'serial_number', ('hostname', 'host_type' ) )
+		('Hardware and Software Information', {
+			'fields' : ( ('brand', 'model'), 'serial_number', ('hostname', 'host_type' ),
+				'operating_system' )
 		}),
 		('Kerberos Information', {
 			'description' : 'If this host is a member of the LDAP domain, you need to tick the request kerberos principal checkbox. A principal will then be created for the host.',
@@ -23,8 +24,8 @@ class HostAdmin(admin.ModelAdmin):
 			'fields' : ( 'request_kerberos_principal', 'kerberos_principal_created',
 				('kerberos_principal_name', 'kerberos_principal_created_date'))
 		}),
-#		('Domain Information', {
-#			'fields' : ('host_domains' )
+#		('Operating System and Architecture', {
+#			'fields' : ('virtual' )
 #		})
 	)
 
@@ -62,4 +63,6 @@ admin.site.register(Host, HostAdmin)
 admin.site.register(Ip4Subnet, SubnetAdmin)
 admin.site.register(Nameserver)
 admin.site.register(MailExchange)
+admin.site.register(OperatingSystem)
+admin.site.register(OsArchitecture)
 admin.site.register(HostType, HostTypeAdmin)

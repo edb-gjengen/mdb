@@ -31,6 +31,7 @@ class Domain(models.Model):
 	domain_minimum_ttl = models.IntegerField(default=86400)
 	domain_admin = models.EmailField()
 	domain_ipaddr = models.IPAddressField()
+	created_date = models.DateTimeField(auto_now_add=True)
 
 	domain_nameservers = models.ManyToManyField(Nameserver)
 	domain_mailexchanges = models.ManyToManyField(MailExchange)
@@ -56,6 +57,7 @@ class DomainSrvRecord(models.Model):
 	port = models.IntegerField()
 	target = models.CharField(max_length=256)
 	domain = models.ForeignKey(Domain)
+	created_date = models.DateTimeField(auto_now_add=True)
 	
 	def __unicode__(self):
 		return self.srvce + "." + self.prot + "." + self.name + ". IN SRV " \
@@ -66,6 +68,7 @@ class DomainTxtRecord(models.Model):
 	name = models.CharField(max_length=256)
 	target = models.CharField(max_length=256)
 	domain = models.ForeignKey(Domain)
+	created_date = models.DateTimeField(auto_now_add=True)
 
 	def __unicode__(self):
 		return self.name + " TXT " + self.target
@@ -74,6 +77,7 @@ class DomainCnameRecord(models.Model):
 	name = models.CharField(max_length=256)
 	target = models.CharField(max_length=256)
 	domain = models.ForeignKey(Domain)
+	created_date = models.DateTimeField(auto_now_add=True)
 
 	def __unicode__(self):
 		return self.name + " IN CNAME " + self.target
@@ -82,6 +86,7 @@ class Ip4Subnet(models.Model):
 	name = models.CharField(max_length=256)
 	netmask = models.IPAddressField()
 	network = models.IPAddressField()
+	created_date = models.DateTimeField(auto_now_add=True)
 	
 	def __unicode__(self):
 		return self.network + " (" + self.name + ")"
@@ -134,6 +139,20 @@ class HostType(models.Model):
 	def num_members(self):
 		return self.host_set.count()
 
+class OsArchitecture(models.Model):
+	architecture = models.CharField(max_length=64)
+
+	def __unicode__(self):
+		return self.architecture
+
+class OperatingSystem(models.Model):
+	name = models.CharField(max_length=256)
+	version = models.CharField(max_length=64)
+	architecture = models.ForeignKey(OsArchitecture)
+
+	def __unicode__(self):
+		return self.name + " " + self.version + " (" + unicode(self.architecture) + ")"
+
 class Host(models.Model):
 	domain = models.ManyToManyField(Domain)
 	location = models.CharField(max_length=1024)
@@ -145,6 +164,8 @@ class Host(models.Model):
 	description = models.CharField(max_length=1024)
 	created_date = models.DateTimeField(auto_now_add=True)
 	host_type = models.ForeignKey(HostType)
+	virtual = models.BooleanField()
+	operating_system = models.ForeignKey(OperatingSystem)
 
 	request_kerberos_principal = models.BooleanField()
 	kerberos_principal_created = models.BooleanField()
@@ -171,6 +192,7 @@ class Interface(models.Model):
 	dhcp_client = models.BooleanField()
 	host = models.ForeignKey(Host)
 	ip4address = models.ForeignKey(Ip4Address, blank=True, null=True)
+	created_date = models.DateTimeField(auto_now_add=True)
 	
 	def __unicode__(self):
 		return self.macaddr
