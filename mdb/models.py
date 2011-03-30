@@ -4,6 +4,7 @@ from django.db.models.signals import pre_delete
 from django.dispatch import receiver
 
 import ipaddr
+import datetime
 
 # Create your models here.
 
@@ -31,6 +32,7 @@ class Domain(models.Model):
 	domain_minimum_ttl = models.IntegerField(default=86400)
 	domain_admin = models.EmailField()
 	domain_ipaddr = models.IPAddressField()
+	domain_filename = models.CharField(max_length=256)
 	created_date = models.DateTimeField(auto_now_add=True)
 
 	domain_nameservers = models.ManyToManyField(Nameserver)
@@ -41,12 +43,58 @@ class Domain(models.Model):
 
 	def num_records(self):
 		size = {}
-		size["srv"] = len(self.domainsrvrecord_set.all())
-		size["txt"] = len(self.domaintxtrecord_set.all())
-		size["a"]   = len(self.host_set.all())
+		size["cname"] = self.domaincnamerecord_set.count()
+		size["srv"] = self.domainsrvrecord_set.count()
+		size["txt"] = self.domaintxtrecord_set.count()
+		size["a"]   = self.host_set.count()
 		return size
 
 	num_records.short_description = "Num Records"
+
+	def zone_file_contents(self):
+		content = "; zone file for %s\n" % self.domain_name
+		content += "; %s\n" % datetime.datetime.now()
+		content += ": filename: %s\n" % self.domain_filename
+		content += "$TTL %s\n" % self.domain_ttl
+		content += "@ IN SOA %s. %s. (\n" % (self.domain_soa, self.domain_admin.replace("@", "."))
+		content += "\t%d\t; serial\n" % self.domain_serial
+		content += "\t%d\t; refresh\n" % self.domain_refresh
+		content += "\t%d\t; retry\n" % self.domain_retry
+		content += "\t%d\t; expire\n" % self.domain_expire
+		content += "\t%d )\t; minimum ttl\n" % self.domain_minimum_ttl
+		content += ";\n"
+		
+		for nameserver in self.domain_nameservers.all():
+			content += "@\tIN\tNS\t%s.\n" % nameserver.hostname
+
+		for mx in self.domain_mailexchanges.all():
+			content += "@\t\tMX\t%d %s.\n" % (mx.priority, mx.hostname)
+
+		if self.domain_ipaddr is not None:
+			content += "@\tIN\tA\t%s\n" % self.domain_ipaddr
+		
+		content += "; SRV records\n"
+
+		for srv in self.domainsrvrecord_set.all():
+			content += unicode(srv) + "\n"
+
+		content += "; CNAME records \n"
+		
+		for cname in self.domaincnamerecord_set.all():
+			content += "%s\tIN\tCNAME\t%s\n" % (cname.name, cname.target)
+		
+		content += "; TXT records \n"
+
+		for txt in self.domaintxtrecord_set.all():
+			content += unicode(txt) + "\n"
+
+		for host in self.host_set.all():
+			if host.interface_set.count() > 0:
+				content += "%s" % host.hostname
+				for interface in host.interface_set.all():
+					content += "\t\tIN\tA\t%s\n" % interface.ip4address.address
+		
+		return content	
 
 class DomainSrvRecord(models.Model):
 	srvce = models.CharField(max_length=64)
@@ -168,9 +216,9 @@ class Host(models.Model):
 	operating_system = models.ForeignKey(OperatingSystem)
 
 	request_kerberos_principal = models.BooleanField()
-	kerberos_principal_created = models.BooleanField()
-	kerberos_principal_name = models.CharField(max_length = 256)
-	kerberos_principal_created_date = models.DateTimeField()
+	kerberos_principal_created = models.BooleanField(editable=False)
+	kerberos_principal_name = models.CharField(max_length = 256, editable=False)
+	kerberos_principal_created_date = models.DateTimeField(null=True, blank=True, editable=False)
 
 	def __unicode__(self):
 		return self.hostname
