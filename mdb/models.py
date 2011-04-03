@@ -133,6 +133,18 @@ class DomainCnameRecord(models.Model):
 	def __unicode__(self):
 		return self.name + " IN CNAME " + self.target
 
+class DhcpConfig(models.Model):
+	serial = models.IntegerField()
+	name = models.CharField(max_length=255)
+	authoritative = models.BooleanField()
+	ddns_update_style = models.CharField(max_length=63)
+	default_lease_time = models.IntegerField(default=600)
+	max_lease_time = models.IntegerField(default=7200)
+	log_facility = models.CharField(max_length=255)
+
+	def __unicode__(self):
+		return self.name
+
 class Ip4Subnet(models.Model):
 	name = models.CharField(max_length=256)
 	netmask = models.IPAddressField()
@@ -149,6 +161,11 @@ class Ip4Subnet(models.Model):
 	domain_minimum_ttl = models.IntegerField(default=86400)
 	domain_admin = models.EmailField()
 	domain_filename = models.CharField(max_length=256)
+
+	dhcp_dynamic = models.BooleanField(default=False)
+	dhcp_dynamic_start = models.IPAddressField(null=True, blank=True)
+	dhcp_dynamic_end = models.IPAddressField(null=True, blank=True)
+	dhcp_config = models.ForeignKey(DhcpConfig)
 	
 	def __unicode__(self):
 		return self.network + " (" + self.name + ")"
@@ -214,6 +231,18 @@ class Ip4Subnet(models.Model):
 				
 
 		return content
+
+class DhcpOption(models.Model):
+	key = models.CharField(max_length=255)
+	value = models.CharField(max_length=255)
+	ip4subnet = models.ForeignKey(Ip4Subnet)
+
+	def __unicode__(self):
+		return self.key + " " + self.value
+
+class DhcpCustomField(models.Model):
+	value = models.CharField(max_length=255)
+	ip4subnet = models.ForeignKey(Ip4Subnet)
 
 class Ip4Address(models.Model):
 	subnet = models.ForeignKey(Ip4Subnet)
@@ -328,11 +357,17 @@ def delete_ips_for_subnet(sender, instance, **kwargs):
 @receiver(pre_save, sender=Ip4Subnet)
 def set_domain_name_for_subnet(sender, instance, **kwargs):
 	# we assume that the reverse domain_name does not change
-	if len(instance.domain_name) > 0:
-		return
-	ipspl = instance.network.split(".")
-	rev = "%s.%s.%s" % (ipspl[2], ipspl[1], ipspl[0])
-	instance.domain_name = "%s.in-addr.arpa" % rev
+	if len(instance.domain_name) == 0:
+		ipspl = instance.network.split(".")
+		rev = "%s.%s.%s" % (ipspl[2], ipspl[1], ipspl[0])
+		instance.domain_name = "%s.in-addr.arpa" % rev
+
+	# lets update the serial of the dhcp config
+	# when the subnet is changed
+	if instance.dhcp_config:
+		instance.dhcp_config.serial = instance.dhcp_config.serial + 1
+		instance.dhcp_config.save()
+
 
 @receiver(post_save, sender=Interface)
 def update_domain_serial_when_change_to_interface(sender, instance, created, **kwargs):
@@ -357,5 +392,4 @@ def update_domain_serial_when_interface_deleted(sender, instance, **kwargs):
 		subnet = instance.ip4address.subnet
 		subnet.domain_serial = subnet.domain_serial + 1
 		subnet.save()
-
 

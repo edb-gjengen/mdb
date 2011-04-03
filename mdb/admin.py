@@ -34,9 +34,17 @@ class Ip4AddressInline(admin.TabularInline):
 	extra = 0
 	readonly_fields = ['address']
 
+class DhcpOptionInline(admin.TabularInline):
+	model = DhcpOption
+	extra = 0
+
+class DhcpCustomFieldInline(admin.TabularInline):
+	model = DhcpCustomField
+	extra = 0
+
 class SubnetAdmin(admin.ModelAdmin):
 	list_display = ['name', 'network', 'netmask', 'num_addresses', 'broadcast_address', 'first_address', 'last_address']
-	inlines = [Ip4AddressInline]
+	inlines = [DhcpOptionInline,DhcpCustomFieldInline,Ip4AddressInline]
 
 class DomainSrvRecordInline(admin.TabularInline):
 	model = DomainSrvRecord
@@ -66,3 +74,5 @@ admin.site.register(MailExchange)
 admin.site.register(OperatingSystem)
 admin.site.register(OsArchitecture)
 admin.site.register(HostType, HostTypeAdmin)
+admin.site.register(DhcpConfig)
+admin.site.register(DhcpOption)
