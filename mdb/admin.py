@@ -21,7 +21,7 @@ class HostAdmin(admin.ModelAdmin):
 		('Domain and Kerberos Information', {
 			'description' : 'If this host is a member of the LDAP domain, you need to tick the request kerberos principal checkbox. A principal will then be created for the host.',
 #			'classes' : [ 'collapse' ],
-			'fields' : ( 'domain', 'request_kerberos_principal', 'kerberos_principal_created',
+			'fields' : ( 'request_kerberos_principal', 'kerberos_principal_created',
 				('kerberos_principal_name', 'kerberos_principal_created_date'))
 		}),
 #		('Operating System and Architecture', {

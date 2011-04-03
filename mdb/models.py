@@ -1,6 +1,5 @@
 from django.db import models
-from django.db.models.signals import post_save
-from django.db.models.signals import pre_delete
+from django.db.models.signals import post_save, pre_save, pre_delete
 from django.dispatch import receiver
 
 import ipaddr
@@ -51,10 +50,15 @@ class Domain(models.Model):
 
 	num_records.short_description = "Num Records"
 
+	def __eq__(self, other):
+		if not other: return False
+		return self.domain_name == other.domain_name
+
 	def zone_file_contents(self):
-		content = "; zone file for %s\n" % self.domain_name
+		content =  "; serial:%d\n" % self.domain_serial
+		content += "; zone file for %s\n" % self.domain_name
 		content += "; %s\n" % datetime.datetime.now()
-		content += ": filename: %s\n" % self.domain_filename
+		content += "; filename: %s\n" % self.domain_filename
 		content += "$TTL %s\n" % self.domain_ttl
 		content += "@ IN SOA %s. %s. (\n" % (self.domain_soa, self.domain_admin.replace("@", "."))
 		content += "\t%d\t; serial\n" % self.domain_serial
@@ -63,7 +67,7 @@ class Domain(models.Model):
 		content += "\t%d\t; expire\n" % self.domain_expire
 		content += "\t%d )\t; minimum ttl\n" % self.domain_minimum_ttl
 		content += ";\n"
-		
+
 		for nameserver in self.domain_nameservers.all():
 			content += "@\tIN\tNS\t%s.\n" % nameserver.hostname
 
@@ -88,11 +92,10 @@ class Domain(models.Model):
 		for txt in self.domaintxtrecord_set.all():
 			content += unicode(txt) + "\n"
 
-		for host in self.host_set.all():
-			if host.interface_set.count() > 0:
-				content += "%s" % host.hostname
-				for interface in host.interface_set.all():
-					content += "\t\tIN\tA\t%s\n" % interface.ip4address.address
+		for interface in self.interface_set.all():
+			host = interface.host
+			if interface.ip4address:
+				content += "%s\tIN\tA\t%s\n" % (host.hostname, interface.ip4address.address)
 		
 		return content	
 
@@ -135,6 +138,17 @@ class Ip4Subnet(models.Model):
 	netmask = models.IPAddressField()
 	network = models.IPAddressField()
 	created_date = models.DateTimeField(auto_now_add=True)
+	domain_name = models.CharField(max_length=255, editable=False)
+	domain_nameservers = models.ManyToManyField(Nameserver)
+	domain_soa = models.CharField(max_length=256)
+	domain_ttl = models.IntegerField(default=60)
+	domain_serial = models.IntegerField(default=2011010101)
+	domain_refresh = models.IntegerField(default=28800)
+	domain_retry = models.IntegerField(default=7200)
+	domain_expire = models.IntegerField(default=604800)
+	domain_minimum_ttl = models.IntegerField(default=86400)
+	domain_admin = models.EmailField()
+	domain_filename = models.CharField(max_length=256)
 	
 	def __unicode__(self):
 		return self.network + " (" + self.name + ")"
@@ -158,12 +172,48 @@ class Ip4Subnet(models.Model):
 
 		return curr
 
-	
 	broadcast_address.short_description = 'broadcast'
 	num_addresses.short_description = '#addresses'
 	first_address.short_description = 'first address'
 	last_address.short_description = 'last address'
 
+	def zone_file_contents(self):
+		content =  "; serial:%d\n" % self.domain_serial
+		content += "; zone file for %s\n" % self.domain_name
+		content += "; %s\n" % datetime.datetime.now()
+		content += "; filename: %s\n" % self.domain_filename
+		content += "$TTL %s\n" % self.domain_ttl
+		content += "@ IN SOA %s. %s. (\n" % (self.domain_soa, self.domain_admin.replace("@", "."))
+		content += "\t%d\t; serial\n" % self.domain_serial
+		content += "\t%d\t; refresh\n" % self.domain_refresh
+		content += "\t%d\t; retry\n" % self.domain_retry
+		content += "\t%d\t; expire\n" % self.domain_expire
+		content += "\t%d )\t; minimum ttl\n" % self.domain_minimum_ttl
+		content += ";\n"
+		content += ";\n"
+
+		for nameserver in self.domain_nameservers.all():
+			content += "@\tIN\tNS\t%s.\n" % nameserver.hostname
+		
+		content += ";\n"
+
+		for addr in self.ip4address_set.all():
+			if addr.interface_set.count() == 0:
+				content += "%s\tIN\tPTR\t%s.%s\n" % (addr, addr.address.split(".")[3],
+					"dhcp.neuf.no.")
+				continue
+
+			for interface in addr.interface_set.all():
+				if interface.domain == None:
+					content += "%s\tIN\tPTR\t%s.%s.\n" % (addr, addr.address.split(".")[3],
+						"dhcp.neuf.no")
+
+				else:
+					hostname = "%s.%s" % (interface.host.hostname, interface.domain.domain_name)
+					content += "%s\tIN\tPTR\t%s.\n" % (addr, hostname)
+				
+
+		return content
 
 class Ip4Address(models.Model):
 	subnet = models.ForeignKey(Ip4Subnet)
@@ -202,7 +252,6 @@ class OperatingSystem(models.Model):
 		return self.name + " " + self.version + " (" + unicode(self.architecture) + ")"
 
 class Host(models.Model):
-	domain = models.ManyToManyField(Domain)
 	location = models.CharField(max_length=1024)
 	brand = models.CharField(max_length=1024)
 	model = models.CharField(max_length=1024)
@@ -225,13 +274,26 @@ class Host(models.Model):
 
 	def in_domain(self):
 		domains = []
-		for d in self.domain.all():
-			domains.append(unicode(d))
+		for interface in self.interface_set.all():
+			if interface.domain:
+				domains.append(unicode(interface.domain))
 		return ",".join(domains)
 
 	in_domain.short_description = "in domains"
-			
-		
+	
+	def get_ip_addresses(self):
+		addresses = []
+		for interface in self.interface_set.all():
+			if interface.ip4address == None: continue
+			addresses.append( interface.ip4address.address )
+		return addresses
+
+	def get_ip_addresses_for_domain(self, domain):
+		addresses = []
+		for interface in self.interface_set.all():
+			if interface.ip4address == None: continue
+			addresses.append( interface.ip4address.address )
+		return addresses
 
 class Interface(models.Model):
 	name = models.CharField(max_length=128)
@@ -241,6 +303,7 @@ class Interface(models.Model):
 	host = models.ForeignKey(Host)
 	ip4address = models.ForeignKey(Ip4Address, blank=True, null=True)
 	created_date = models.DateTimeField(auto_now_add=True)
+	domain = models.ForeignKey(Domain)
 	
 	def __unicode__(self):
 		return self.macaddr
@@ -261,3 +324,38 @@ def delete_ips_for_subnet(sender, instance, **kwargs):
 	
 	for addr in instance.ip4address_set.all():
 		addr.delete()
+
+@receiver(pre_save, sender=Ip4Subnet)
+def set_domain_name_for_subnet(sender, instance, **kwargs):
+	# we assume that the reverse domain_name does not change
+	if len(instance.domain_name) > 0:
+		return
+	ipspl = instance.network.split(".")
+	rev = "%s.%s.%s" % (ipspl[2], ipspl[1], ipspl[0])
+	instance.domain_name = "%s.in-addr.arpa" % rev
+
+@receiver(post_save, sender=Interface)
+def update_domain_serial_when_change_to_interface(sender, instance, created, **kwargs):
+	if instance.domain != None:
+		domain = instance.domain
+		domain.domain_serial = domain.domain_serial + 1
+		domain.save()
+	
+	if instance.ip4address != None:
+		subnet = instance.ip4address.subnet
+		subnet.domain_serial = subnet.domain_serial + 1
+		subnet.save()
+
+@receiver(pre_delete, sender=Interface)
+def update_domain_serial_when_interface_deleted(sender, instance, **kwargs):
+	if instance.domain != None:
+		domain = instance.domain
+		domain.domain_serial = domain.domain_serial + 1
+		domain.save()
+	
+	if instance.ip4address != None:
+		subnet = instance.ip4address.subnet
+		subnet.domain_serial = subnet.domain_serial + 1
+		subnet.save()
+
+
