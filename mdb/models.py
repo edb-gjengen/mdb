@@ -249,7 +249,10 @@ class Ip4Address(models.Model):
 	address = models.IPAddressField()
 
 	def __unicode__(self):
-		return self.address
+		if self.interface_set.count() == 0:
+			return self.address
+		else:
+			return "%s (%s)" % (self.address, self.interface_set.get().host.hostname )
 
 	def assigned_to_host(self):
 		self.interface_set.get().host
