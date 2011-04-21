@@ -216,18 +216,18 @@ class Ip4Subnet(models.Model):
 
 		for addr in self.ip4address_set.all():
 			if addr.interface_set.count() == 0:
-				content += "%s\tIN\tPTR\t%s.%s\n" % (addr, addr.address.split(".")[3],
+				content += "%s\tIN\tPTR\t%s.%s\n" % (addr.address, addr.address.split(".")[3],
 					"dhcp.neuf.no.")
 				continue
 
 			for interface in addr.interface_set.all():
 				if interface.domain == None:
-					content += "%s\tIN\tPTR\t%s.%s.\n" % (addr, addr.address.split(".")[3],
+					content += "%s\tIN\tPTR\t%s.%s.\n" % (addr.address, addr.address.split(".")[3],
 						"dhcp.neuf.no")
 
 				else:
 					hostname = "%s.%s" % (interface.host.hostname, interface.domain.domain_name)
-					content += "%s\tIN\tPTR\t%s.\n" % (addr, hostname)
+					content += "%s\tIN\tPTR\t%s.\n" % (addr.address, hostname)
 				
 
 		return content
