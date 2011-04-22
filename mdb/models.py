@@ -285,7 +285,7 @@ class Ip4Subnet(models.Model):
 						(interface.host.hostname, \
 						interface.domain.domain_name)
 					content += "%-20s\tIN\tPTR\t%s.\n" % \
-						(addr.address, hostname)
+						(addr.address.split(".")[3], hostname)
 
 		return content
 
