@@ -1,0 +1,8 @@
+To use this scripts, you have to add the projects location to the
+pythonpath. This is easily archieved by setting an environment variable
+like this:
+
+export PYTHONPATH=/opt/projects/:/opt/projects/dns_mdb
+
+It is important that both the path abov the project and the project
+folder itself are added to the path before the script is run.
