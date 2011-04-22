@@ -20,13 +20,17 @@ zone_check_command = "/usr/sbin/named-checkzone %s %s"
 zone_check_temp_dir = "/tmp/zonecheck"
 zone_check_temp_file = "%s/%s" % ( zone_check_temp_dir, "zone" )
 
+debugging = False
+
 if not os.path.isfile( (zone_check_command % ("","")).strip()):
 	print "ERROR: cannot find zone checking tool, exiting..."
-	sys.exit(1)
+	if not debugging:
+		sys.exit(1)
 
 if not os.path.isfile( (bind_init % ("")).strip()):
 	print "ERROR: cannot find bind init script, exiting..."
-	sys.exit(1)
+	if not debugging:
+		sys.exit(1)
 
 if not os.path.isdir(zone_check_temp_dir):
 	os.mkdir(zone_check_temp_dir)
@@ -43,7 +47,7 @@ def check_zone(zone, filename):
 reload_bind = False
 
 for domain in Domain.objects.all():
-	if domain.domain_serial == domain.domain_active_serial:
+	if domain.domain_serial == domain.domain_active_serial and not debugging:
 		continue
 	
 	print "updating domain %s [%d -> %d]" % \
@@ -74,11 +78,12 @@ for domain in Domain.objects.all():
 
 	reload_bind = True
 
-	domain.domain_active_serial = domain.domain_serial
-	domain.save()
+	if not debugging:
+		domain.domain_active_serial = domain.domain_serial
+		domain.save()
 	
 for subnet in Ip4Subnet.objects.all():
-	if subnet.domain_serial == subnet.domain_active_serial:
+	if subnet.domain_serial == subnet.domain_active_serial and not debugging:
 		continue
 	print "updating subnet %s [%d -> %d]" % \
 		(subnet.domain_name, subnet.domain_active_serial, \
@@ -107,8 +112,9 @@ for subnet in Ip4Subnet.objects.all():
 
 	reload_bind = True
 
-	subnet.domain_active_serial = subnet.domain_serial
-	subnet.save()
+	if not debugging:
+		subnet.domain_active_serial = subnet.domain_serial
+		subnet.save()
 
 if reload_bind:
 	sys.stdout.write("restarting bind...")
@@ -119,3 +125,5 @@ if reload_bind:
 			output)
 	else:
 		sys.stdout.write("ok\n")
+		mail_admins("Successfully updated bind zone files", \
+			"Bind zone files has been updated")
