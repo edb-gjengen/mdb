@@ -5,6 +5,7 @@ TEMPLATE_DEBUG = DEBUG
 
 ADMINS = (
     ('Tor Martin Slaaen', 'tormsl@gmail.com'),
+    ('Neuf System Administrator', 'sysadmin@neuf.no'),
 )
 
 MANAGERS = ADMINS
