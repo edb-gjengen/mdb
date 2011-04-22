@@ -24,7 +24,8 @@ class Domain(models.Model):
 	domain_name = models.CharField(max_length=256)
 	domain_soa = models.CharField(max_length=256)
 	domain_ttl = models.IntegerField(default=60)
-	domain_serial = models.IntegerField(default=2011010101)
+	domain_serial = models.IntegerField(default=1)
+	domain_active_serial = models.IntegerField(default=0, editable=False)
 	domain_refresh = models.IntegerField(default=28800)
 	domain_retry = models.IntegerField(default=7200)
 	domain_expire = models.IntegerField(default=604800)
@@ -91,11 +92,13 @@ class Domain(models.Model):
 
 		for txt in self.domaintxtrecord_set.all():
 			content += unicode(txt) + "\n"
+	
+		content += "; HOST records\n"
 
 		for interface in self.interface_set.all():
 			host = interface.host
 			if interface.ip4address:
-				content += "%s\tIN\tA\t%s\n" % (host.hostname, interface.ip4address.address)
+				content += "%-20s\tIN\tA\t%s\n" % (host.hostname, interface.ip4address.address)
 		
 		return content	
 
@@ -154,7 +157,8 @@ class Ip4Subnet(models.Model):
 	domain_nameservers = models.ManyToManyField(Nameserver)
 	domain_soa = models.CharField(max_length=256)
 	domain_ttl = models.IntegerField(default=60)
-	domain_serial = models.IntegerField(default=2011010101)
+	domain_serial = models.IntegerField(default=1)
+	domain_active_serial = models.IntegerField(default=0, editable=False)
 	domain_refresh = models.IntegerField(default=28800)
 	domain_retry = models.IntegerField(default=7200)
 	domain_expire = models.IntegerField(default=604800)
@@ -194,13 +198,14 @@ class Ip4Subnet(models.Model):
 	first_address.short_description = 'first address'
 	last_address.short_description = 'last address'
 
-	def zone_file_contents(self):
-		content =  "; serial:%d\n" % self.domain_serial
+	def zone_file_contents(self, generate_unassigned = False):
+		content = ""
 		content += "; zone file for %s\n" % self.domain_name
 		content += "; %s\n" % datetime.datetime.now()
 		content += "; filename: %s\n" % self.domain_filename
 		content += "$TTL %s\n" % self.domain_ttl
-		content += "@ IN SOA %s. %s. (\n" % (self.domain_soa, self.domain_admin.replace("@", "."))
+		content += "@ IN SOA %s. %s. (\n" % (self.domain_soa, \
+			self.domain_admin.replace("@", "."))
 		content += "\t%d\t; serial\n" % self.domain_serial
 		content += "\t%d\t; refresh\n" % self.domain_refresh
 		content += "\t%d\t; retry\n" % self.domain_retry
@@ -215,20 +220,25 @@ class Ip4Subnet(models.Model):
 		content += ";\n"
 
 		for addr in self.ip4address_set.all():
-			if addr.interface_set.count() == 0:
-				content += "%s\tIN\tPTR\t%s.%s\n" % (addr.address, addr.address.split(".")[3],
+			if addr.interface_set.count() == 0 and generate_unassigned:
+				content += "%s\tIN\tPTR\t%s.%s\n" % \
+					(addr.address, addr.address.split(".")[3], \
 					"dhcp.neuf.no.")
 				continue
 
 			for interface in addr.interface_set.all():
-				if interface.domain == None:
-					content += "%s\tIN\tPTR\t%s.%s.\n" % (addr.address, addr.address.split(".")[3],
+				if interface.domain == None and generate_unassigned:
+					content += "%s\tIN\tPTR\t%s.%s.\n" % \
+						(addr.address, \
+						addr.address.split(".")[3], \
 						"dhcp.neuf.no")
 
 				else:
-					hostname = "%s.%s" % (interface.host.hostname, interface.domain.domain_name)
-					content += "%s\tIN\tPTR\t%s.\n" % (addr.address, hostname)
-				
+					hostname = "%s.%s" % \
+						(interface.host.hostname, \
+						interface.domain.domain_name)
+					content += "%-20s\tIN\tPTR\t%s.\n" % \
+						(addr.address, hostname)
 
 		return content
 
