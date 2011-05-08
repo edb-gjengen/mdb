@@ -217,6 +217,48 @@ class Ip6Subnet(models.Model):
 	def __unicode__(self):
 		return self.network + " (" + self.name + ")"
 
+	def zone_file_contents(self, generate_unassigned = False):
+		content = ""
+		content += "; zone file for %s\n" % self.domain_name
+		content += "; %s\n" % datetime.datetime.now()
+		content += "; filename: %s\n" % self.domain_filename
+		content += "$TTL %s\n" % self.domain_ttl
+		content += "@ IN SOA %s. %s. (\n" % (self.domain_soa, \
+			self.domain_admin.replace("@", "."))
+		content += "\t%d\t; serial\n" % self.domain_serial
+		content += "\t%d\t; refresh\n" % self.domain_refresh
+		content += "\t%d\t; retry\n" % self.domain_retry
+		content += "\t%d\t; expire\n" % self.domain_expire
+		content += "\t%d )\t; minimum ttl\n" % self.domain_minimum_ttl
+		content += ";\n"
+		content += ";\n"
+
+		for nameserver in self.domain_nameservers.all():
+			content += "@\tIN\tNS\t%s.\n" % nameserver.hostname
+		
+		content += ";\n"
+
+		# find the network
+		network = ipaddr.IPv6Address("%s::" % self.network)
+		content += "$ORIGIN " + ".".join(network.exploded.replace(":","")[:16])[::-1] + ".ip6.arpa.\n"
+
+		for addr in self.ip6address_set.all():
+#			if addr.interface_set.count() == 0: continue
+
+			if addr.interface.domain == None:
+				continue
+			hostname = "%s.%s" % (addr.interface.host.hostname, addr.interface.domain.domain_name)
+			
+			ip = ipaddr.IPv6Address(self.network + addr.address)
+			ip = ".".join(ip.exploded.replace(":","")[16:])[::-1]
+			content += "%s\tPTR\t%s\n" % (ip, hostname)
+
+#				addr = ipaddr.IPv6Address("%s%s" % (interface.
+
+#				content += "%20s\tIN\tPTR\t%s.\n" % (addr.address.split(".")[3], hostname)
+
+		return content
+
 class Ip4Subnet(models.Model):
 
 	name = models.CharField(max_length=256)
@@ -473,6 +515,13 @@ def set_domain_name_for_subnet(sender, instance, **kwargs):
 		instance.dhcp_config.serial = instance.dhcp_config.serial + 1
 		instance.dhcp_config.save()
 
+@receiver(pre_save, sender=Ip6Subnet)
+def set_domain_name_for_ipv6_subnet(sender, instance, **kwargs):
+	if len(instance.domain_name) > 0:
+		return
+
+	network = ipaddr.IPv6Address("%s::" % instance.network)
+	instance.domain_name = ".".join(network.exploded.replace(":","")[:16])[::-1] + ".ip6.arpa"
 
 @receiver(post_save, sender=Interface)
 def update_domain_serial_when_change_to_interface(sender, instance, created, **kwargs):
