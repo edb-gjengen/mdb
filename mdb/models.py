@@ -99,6 +99,8 @@ class Domain(models.Model):
 			host = interface.host
 			if interface.ip4address:
 				content += "%-20s\tIN\tA\t%s\n" % (host.hostname, interface.ip4address.address)
+			for ipv6addr in interface.ip6address_set.all():
+				content += "%-20s\tIN\tAAAA\t%s\n" % (host.hostname, ipv6addr.full_address())
 		
 		return content	
 
