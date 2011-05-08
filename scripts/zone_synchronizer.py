@@ -20,7 +20,7 @@ zone_check_command = "/usr/sbin/named-checkzone %s %s"
 zone_check_temp_dir = "/tmp/zonecheck"
 zone_check_temp_file = "%s/%s" % ( zone_check_temp_dir, "zone" )
 
-debugging = False
+debugging = True
 
 if not os.path.isfile( (zone_check_command % ("","")).strip()):
 	print "ERROR: cannot find zone checking tool, exiting..."
@@ -118,7 +118,44 @@ for subnet in Ip4Subnet.objects.all():
 		subnet.domain_active_serial = subnet.domain_serial
 		subnet.save()
 
-if reload_bind:
+for subnet in Ip6Subnet.objects.all():
+	if subnet.domain_serial == subnet.domain_active_serial and not debugging:
+		continue
+	print "updating subnet %s [%d -> %d]" % \
+		(subnet.domain_name, subnet.domain_active_serial, \
+		subnet.domain_serial)
+	
+	sys.stdout.write("\t- validating...")
+	zonecheck = open(zone_check_temp_file, "w")
+	zonecheck.write(subnet.zone_file_contents())
+	zonecheck.close()
+	sys.stdout.write("ok\n")
+
+	print subnet.zone_file_contents()
+
+	result = check_zone(subnet.domain_name, zone_check_temp_file)
+	if result['value'] != 0:
+		sys.stdout.write("fail\n")
+		log = open(error_log_file % (subnet.domain_name, \
+			subnet.domain_serial), "w")
+		log.write(subnet.zone_file_contents())
+		log.close()		
+		continue
+
+	sys.stdout.write("\t- writing zone file...")
+	zonefile = open(subnet.domain_filename, "w")
+	zonefile.write(subnet.zone_file_contents())
+	zonefile.close()
+	sys.stdout.write("ok\n")
+
+	reload_bind = True
+
+	if not debugging:
+		subnet.domain_active_serial = subnet.domain_serial
+		subnet.save()
+
+
+if reload_bind and not debugging:
 	sys.stdout.write("restarting bind...")
 	status, output = getstatusoutput(bind_init % "reload")
 	if status != 0:
