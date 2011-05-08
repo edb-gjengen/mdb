@@ -20,7 +20,7 @@ zone_check_command = "/usr/sbin/named-checkzone %s %s"
 zone_check_temp_dir = "/tmp/zonecheck"
 zone_check_temp_file = "%s/%s" % ( zone_check_temp_dir, "zone" )
 
-debugging = True
+debugging = False
 
 if not os.path.isfile( (zone_check_command % ("","")).strip()):
 	print "ERROR: cannot find zone checking tool, exiting..."
