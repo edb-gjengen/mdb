@@ -41,6 +41,8 @@ def check_zone(zone, filename):
 	status, output = getstatusoutput(zone_check_command % (zone, filename))
 	retval['value'] = status
 	retval['output'] = output
+	if debugging and status != 0:
+		print output
 
 	return retval
 
@@ -63,8 +65,8 @@ for domain in Domain.objects.all():
 	if result['value'] != 0:
 		sys.stdout.write("fail\n")
 		log = open(error_log_file % (domain.domain_name, \
-			domain.domain_serial))
-		log.write(output)
+			domain.domain_serial), "w")
+		log.write(domain.zone_file_contents())
 		log.close()
 		continue
 	
@@ -99,8 +101,8 @@ for subnet in Ip4Subnet.objects.all():
 	if result['value'] != 0:
 		sys.stdout.write("fail\n")
 		log = open(error_log_file % (subnet.domain_name, \
-			subnet.domain_serial))
-		log.write(output)
+			subnet.domain_serial), "w")
+		log.write(subnet.zone_file_contents())
 		log.close()		
 		continue
 
