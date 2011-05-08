@@ -1,13 +1,18 @@
 from mdb.models import *
 from django.contrib import admin
 
+class Ip6AddressInline(admin.TabularInline):
+	model = Ip6Address
+	extra = 0
+
 class InterfaceInline(admin.TabularInline):
+	inlines = [Ip6AddressInline]
 	model = Interface
 	extra = 0
 
 class HostAdmin(admin.ModelAdmin):
 	inlines = [InterfaceInline]
-	list_display = ['hostname', 'brand', 'owner', 'host_type', 'location', 'serial_number', 'in_domain', 'created_date']
+	list_display = ['hostname', 'brand', 'owner', 'host_type', 'location', 'serial_number', 'in_domain', 'created_date', 'ipv6_enabled']
 	readonly_fields = ['kerberos_principal_name', 'kerberos_principal_created_date',
 			'kerberos_principal_created']
 	fieldsets = (
@@ -20,13 +25,10 @@ class HostAdmin(admin.ModelAdmin):
 		}),
 		('Domain and Kerberos Information', {
 			'description' : 'If this host is a member of the LDAP domain, you need to tick the request kerberos principal checkbox. A principal will then be created for the host.',
-#			'classes' : [ 'collapse' ],
+			'classes' : [ 'collapse' ],
 			'fields' : ( 'request_kerberos_principal', 'kerberos_principal_created',
 				('kerberos_principal_name', 'kerberos_principal_created_date'))
 		}),
-#		('Operating System and Architecture', {
-#			'fields' : ('virtual' )
-#		})
 	)
 
 class Ip4AddressInline(admin.TabularInline):
@@ -69,6 +71,8 @@ class HostTypeAdmin(admin.ModelAdmin):
 admin.site.register(Domain, DomainAdmin)
 admin.site.register(Host, HostAdmin)
 admin.site.register(Ip4Subnet, SubnetAdmin)
+admin.site.register(Ip6Subnet)
+admin.site.register(Ip6Address)
 admin.site.register(Nameserver)
 admin.site.register(MailExchange)
 admin.site.register(OperatingSystem)

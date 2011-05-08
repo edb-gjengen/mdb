@@ -194,6 +194,27 @@ class DhcpConfig(models.Model):
 	def __unicode__(self):
 		return self.name
 
+class Ip6Subnet(models.Model):
+	name = models.CharField(max_length=255)
+	network = models.CharField(max_length=255)
+	netmask = models.IntegerField(default=64)
+	created_date = models.DateTimeField(auto_now_add=True)
+	domain_name = models.CharField(max_length=255, editable=False)
+	domain_nameservers = models.ManyToManyField(Nameserver)
+	domain_soa = models.CharField(max_length=255)
+	domain_ttl = models.IntegerField(default=60)
+	domain_serial = models.IntegerField(default=1)
+	domain_active_serial = models.IntegerField(default=0, editable=False)
+	domain_refresh = models.IntegerField(default=28800)
+	domain_retry = models.IntegerField(default=7200)
+	domain_expire = models.IntegerField(default=604800)
+	domain_minimum_ttl = models.IntegerField(default=86400)
+	domain_admin = models.EmailField()
+	domain_filename = models.CharField(max_length=256)
+
+	def __unicode__(self):
+		return self.network + " (" + self.name + ")"
+
 class Ip4Subnet(models.Model):
 
 	name = models.CharField(max_length=256)
@@ -316,6 +337,7 @@ class Ip4Address(models.Model):
 
 	assigned_to_host.short_description = "Assigned to Host"
 
+
 class HostType(models.Model):
 	host_type = models.CharField(max_length=64)
 	description = models.CharField(max_length=1024)
@@ -370,6 +392,12 @@ class Host(models.Model):
 
 	in_domain.short_description = "in domains"
 	
+	def ipv6_enabled(self):
+		for interface in self.interface_set.all():
+			if interface.ipv6_enabled():
+				return True
+		return False
+
 	def get_ip_addresses(self):
 		addresses = []
 		for interface in self.interface_set.all():
@@ -395,7 +423,22 @@ class Interface(models.Model):
 	domain = models.ForeignKey(Domain)
 	
 	def __unicode__(self):
-		return self.macaddr
+		return "%s (%s on %s)" % (self.macaddr, self.name, self.host.hostname)
+
+	def ipv6_enabled(self):
+		return self.ip6address_set.count() > 0;
+
+class Ip6Address(models.Model):
+	subnet = models.ForeignKey(Ip6Subnet)
+	address = models.CharField(max_length=64)
+	interface = models.ForeignKey(Interface)
+	
+	def full_address(self):
+		return self.subnet.network + self.address
+
+	def __unicode__(self):
+		return "%s (%s on %s)" % (self.full_address(), self.interface.name, self.interface.host.hostname)
+
 
 @receiver(post_save, sender=Ip4Subnet)
 def create_ips_for_subnet(sender, instance, created, **kwargs):

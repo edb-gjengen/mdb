@@ -16,7 +16,7 @@ DATABASES = {
         'NAME': 'dns_mdb',                      # Or path to database file if using sqlite3.
         'USER': 'dns_mdb',                      # Not used with sqlite3.
         'PASSWORD': 'dns_mdb',                  # Not used with sqlite3.
-        'HOST': 'snes',                      # Set to empty string for localhost. Not used with sqlite3.
+        'HOST': 'hel',                      # Set to empty string for localhost. Not used with sqlite3.
         'PORT': '3306',                      # Set to empty string for default. Not used with sqlite3.
     }
 }
