@@ -251,7 +251,7 @@ class Ip6Subnet(models.Model):
 			
 			ip = ipaddr.IPv6Address(self.network + addr.address)
 			ip = ".".join(ip.exploded.replace(":","")[16:])[::-1]
-			content += "%s\tPTR\t%s\n" % (ip, hostname)
+			content += "%s\tPTR\t%s.\n" % (ip, hostname)
 
 #				addr = ipaddr.IPv6Address("%s%s" % (interface.
 
