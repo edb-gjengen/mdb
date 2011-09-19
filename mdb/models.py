@@ -2,6 +2,8 @@ from django.db import models
 from django.db.models.signals import post_save, pre_save, pre_delete
 from django.dispatch import receiver
 
+from validators import validate_hostname
+
 import ipaddr
 import datetime
 
@@ -411,7 +413,7 @@ class Host(models.Model):
 	brand = models.CharField(max_length=1024)
 	model = models.CharField(max_length=1024)
 	owner = models.CharField(max_length=1024)
-	hostname = models.CharField(max_length=64)
+	hostname = models.CharField(max_length=64, validators=[validate_hostname])
 	serial_number = models.CharField(max_length=256)
 	description = models.CharField(max_length=1024)
 	created_date = models.DateTimeField(auto_now_add=True)
@@ -462,7 +464,7 @@ class Interface(models.Model):
 	pxe_filename = models.CharField(max_length=64, blank=True)
 	dhcp_client = models.BooleanField()
 	host = models.ForeignKey(Host)
-	ip4address = models.ForeignKey(Ip4Address, blank=True, null=True)
+	ip4address = models.ForeignKey(Ip4Address, blank=True, null=True, unique=True)
 	created_date = models.DateTimeField(auto_now_add=True)
 	domain = models.ForeignKey(Domain)
 	
