@@ -444,6 +444,22 @@ class Host(models.Model):
 				return True
 		return False
 
+        ipv6_enabled.boolean = True
+
+	def mac_addresses(self):
+		addresses = []
+		for interface in self.interface_set.all():
+			if interface.macaddr == None: continue
+			addresses.append( interface.macaddr)
+		return ",".join(addresses)
+
+	def ip_addresses(self):
+		addresses = []
+		for interface in self.interface_set.all():
+			if interface.ip4address == None: continue
+			addresses.append( interface.ip4address.address )
+		return ",".join(addresses)
+
 	def get_ip_addresses(self):
 		addresses = []
 		for interface in self.interface_set.all():

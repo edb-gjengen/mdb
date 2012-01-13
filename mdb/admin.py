@@ -12,9 +12,10 @@ class InterfaceInline(admin.TabularInline):
 
 class HostAdmin(admin.ModelAdmin):
 	inlines = [InterfaceInline]
-	list_display = ['hostname', 'brand', 'owner', 'host_type', 'location', 'serial_number', 'in_domain', 'created_date', 'ipv6_enabled']
+	list_display = ['hostname', 'brand', 'owner', 'host_type', 'location', 'mac_addresses', 'ip_addresses', 'in_domain', 'ipv6_enabled', 'created_date']
 	readonly_fields = ['kerberos_principal_name', 'kerberos_principal_created_date',
 			'kerberos_principal_created']
+        search_fields = ['hostname', 'location', 'interface__macaddr','interface__ip4address__address']
 	fieldsets = (
 		('Owner Information', {
 			'fields' : ( 'owner', 'location', 'description' )
@@ -63,6 +64,7 @@ class DomainCnameRecordInline(admin.TabularInline):
 class DomainAdmin(admin.ModelAdmin):
 	inlines = [DomainSrvRecordInline, DomainTxtRecordInline, DomainCnameRecordInline]
 	list_display = ['domain_name', 'domain_soa', 'domain_admin', 'num_records', 'domain_ipaddr']
+        search_fields = ['domain_name']
 
 
 class HostTypeAdmin(admin.ModelAdmin):
