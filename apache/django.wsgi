@@ -1,4 +1,6 @@
 import os
+import sys
+from os.path import dirname, join
 
 os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
 
