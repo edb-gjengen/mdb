@@ -1,0 +1,32 @@
+<!DOCTYPE html> 
+<html> 
+    <head> 
+	<title>MDB</title>
+        <link rel="stylesheet" href="{{ STATIC_URL }}bootstrap.min.css">
+    </head>
+<body>
+    <div class="container">
+
+	<div class="page-header">
+            <h1>MDB</h1>
+	</div>
+
+	<div class="row">	
+            <div class="span3">
+                <h3>Velkommen</h3>
+                <p>Dette er maskindatabasen.</p>
+            </div>
+            <div class="span5">
+                <h3>Go!</h3>
+                <a href="/admin/" class="btn large primary">Admin</a>
+                <a href="/admin/mdb/host" class="btn large">Hosts</a>
+                <a href="/admin/mdb/domain" class="btn large">Domains</a>
+            </div>
+        </div>
+        <footer class="footer">
+            <img src="{{ STATIC_URL }}edb_brick.png" />
+        </footer>
+
+    </div>
+</body>
+</html>
