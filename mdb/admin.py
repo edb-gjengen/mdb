@@ -11,8 +11,9 @@ class InterfaceInline(admin.TabularInline):
 	extra = 0
 
 class HostAdmin(admin.ModelAdmin):
+	ordering = ('hostname',)
 	inlines = [InterfaceInline]
-	list_display = ['hostname', 'brand', 'owner', 'host_type', 'location', 'mac_addresses', 'ip_addresses', 'in_domain', 'ipv6_enabled', 'created_date']
+	list_display = ['hostname', 'owner', 'host_type', 'location', 'mac_addresses', 'ip_addresses', 'in_domain', 'ipv6_enabled']
 	readonly_fields = ['kerberos_principal_name', 'kerberos_principal_created_date',
 			'kerberos_principal_created']
         search_fields = ['hostname', 'location', 'interface__macaddr','interface__ip4address__address']
