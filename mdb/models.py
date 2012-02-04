@@ -6,6 +6,7 @@ from validators import validate_hostname
 
 import ipaddr
 import datetime
+import re
 
 # Create your models here.
 
@@ -502,6 +503,39 @@ class Ip6Address(models.Model):
 		return "%s (%s on %s)" % (self.full_address(), self.interface.name, self.interface.host.hostname)
 
 
+def format_domain_serial_and_add_one(serial):
+	today = datetime.datetime.now()
+	res = re.findall("^%4d%02d%02d(\d\d)$" %
+		(today.year, today.month, today.day), str(serial), re.DOTALL)
+
+	if len(res) == 0:
+		""" This probably means that the serial is malformed
+		or the date is wrong. We assume that if the date is wrong,
+		it is in the past. Just create a new serial starting from 1."""
+		return "%4d%02d%02d%02d" % \
+			(today.year, today.month, today.day, 1)
+	elif len(res) == 1:
+		""" The serial contains todays date, just update it. """
+		try:
+			number = int(res[0])
+		except:
+			number = 1
+		if number >= 99:
+			""" This is bad... Just keep the number on 99.
+			We also send a mail to sysadmins telling them that
+			something is wrong..."""
+			
+		else:
+			number += 1
+		return "%4d%02d%02d%02d" % \
+			(today.year, today.month, today.day, number )
+	else:
+		""" Just return the first serial for today. """
+		return "%4d%02d%02d%02d" % \
+			(today.year, today.month, today.day, 1 )
+	
+
+
 @receiver(post_save, sender=Ip4Subnet)
 def create_ips_for_subnet(sender, instance, created, **kwargs):
 	if not created:
@@ -527,10 +561,15 @@ def set_domain_name_for_subnet(sender, instance, **kwargs):
 		rev = "%s.%s.%s" % (ipspl[2], ipspl[1], ipspl[0])
 		instance.domain_name = "%s.in-addr.arpa" % rev
 
+	# update it's own serial
+	if instance.domain_serial != None:
+		instance.domain_serial = format_domain_serial_and_add_one(instance.domain_serial)
+
 	# lets update the serial of the dhcp config
 	# when the subnet is changed
 	if instance.dhcp_config:
-		instance.dhcp_config.serial = instance.dhcp_config.serial + 1
+#		instance.dhcp_config.serial = instance.dhcp_config.serial + 1
+		instance.dhcp_config.serial = format_domain_serial_and_add_one(instance.dhcp_config.serial)
 		instance.dhcp_config.save()
 
 @receiver(pre_save, sender=Ip6Subnet)
@@ -545,13 +584,27 @@ def set_domain_name_for_ipv6_subnet(sender, instance, **kwargs):
 def update_domain_serial_when_change_to_interface(sender, instance, created, **kwargs):
 	if instance.domain != None:
 		domain = instance.domain
-		domain.domain_serial = domain.domain_serial + 1
+		domain.domain_serial = format_domain_serial_and_add_one(domain.domain_serial)
 		domain.save()
 	
 	if instance.ip4address != None:
 		subnet = instance.ip4address.subnet
-		subnet.domain_serial = subnet.domain_serial + 1
+		subnet.domain_serial = format_domain_serial_and_add_one(subnet.domain_serial)
 		subnet.save()
+
+@receiver(post_save, sender=Host)
+def update_domain_serial_when_change_to_host(sender, instance, created, **kwargs):
+	for interface in instance.interface_set.all():
+		if interface.domain != None:
+			domain = interface.domain
+			domain.domain_serial = \
+				format_domain_serial_and_add_one(domain.domain_serial)
+			domain.save()
+		if interface.ip4address != None:
+			subnet = interface.ip4address.subnet
+			subnet.domain_serial = \
+				format_domain_serial_and_add_one(subnet.domain_serial)
+			subnet.save()
 
 @receiver(pre_delete, sender=Interface)
 def update_domain_serial_when_interface_deleted(sender, instance, **kwargs):
@@ -565,3 +618,6 @@ def update_domain_serial_when_interface_deleted(sender, instance, **kwargs):
 		subnet.domain_serial = subnet.domain_serial + 1
 		subnet.save()
 
+@receiver(pre_save, sender=Domain)
+def update_domain_serial_when_domain_is_saved(sender, instance, **kwargs):
+	instance.domain_serial = format_domain_serial_and_add_one(instance.domain_serial)
