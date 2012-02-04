@@ -372,6 +372,7 @@ class DhcpCustomField(models.Model):
 class Ip4Address(models.Model):
 	subnet = models.ForeignKey(Ip4Subnet)
 	address = models.IPAddressField()
+	last_contact = models.DateTimeField()
 
 	def __unicode__(self):
 		if self.interface_set.count() == 0:
