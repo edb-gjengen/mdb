@@ -86,6 +86,11 @@ class Domain(models.Model):
 		for srv in self.domainsrvrecord_set.all():
 			content += unicode(srv) + "\n"
 
+		content += "; A records\n"
+		
+		for a in self.domainarecord_set.all():
+			content += unicode(a) + "\n"
+
 		content += "; CNAME records \n"
 		
 		for cname in self.domaincnamerecord_set.all():
@@ -140,6 +145,16 @@ class DomainCnameRecord(models.Model):
 
 	def __unicode__(self):
 		return self.name + " IN CNAME " + self.target
+
+class DomainARecord(models.Model):
+	name = models.CharField(max_length=256)
+	target = models.CharField(max_length=256)
+	domain = models.ForeignKey(Domain)
+	created_date = models.DateTimeField(auto_now_add=True)
+
+	def __unicode__(self):
+		return self.name + " IN A " + self.target
+	
 
 class DhcpConfig(models.Model):
 	serial = models.IntegerField()
