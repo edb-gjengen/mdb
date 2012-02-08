@@ -148,4 +148,4 @@ for host in hosts:
 # Wait for all threads to finish, eg. queue is empty.
 queue.join()
 
-
+sys.exit(0)
