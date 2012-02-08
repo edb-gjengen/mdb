@@ -5,6 +5,16 @@
 		<link rel="stylesheet" href="{{ STATIC_URL }}bootstrap/css/bootstrap.css">
 		<link rel="stylesheet" href="{{ STATIC_URL }}bootstrap/css/bootstrap-responsive.css">
 		<meta charset="utf-8">
+		<style type="text/css">
+			body {
+				padding-top: 60px;
+				padding-bottom: 40px;
+			}
+			.sidebar-nav {
+				padding: 9px 0;
+			}
+		</style>
+
 	</head>
 <body>
 <div class="navbar navbar-fixed-top">
@@ -16,13 +26,14 @@
 				<span class="icon-bar"></span>
 			</a>
 			<a class="brand" href="http://mdb.neuf.no">MDB</a>
-			<div class="nav-collapse">
+<!--			<div class="nav-collapse">
 				<ul class="nav">
 					<li class="active"><a href="/">Home</a></li>
 					<li><a href="/info">Info</a></li>
 					<li><a href="/admin">Admin</a></li>
 				</ul>
 			</div><!--/.nav-collapse -->
+-->
 		</div>
 	</div>
 </div>
@@ -32,24 +43,23 @@
 		<h1>MDBs new look-and-feel!</h1>
 		<p>For some time now, I've have been thinking about giving mdb a face-lift. The day has finally come! MDB now has some extended features, where you can browse around and easily find what you are looking for in order to administer and manage hosts and networks at DNS.</p>
 		<p>The admin-interface has not yet been changed, so please live with it a little longer...</p>
-		<p><small>--<br/>tormsl</small></p>
+		<p><small>tormsl</small></p>
 	</div>
 	<!-- Example row of columns -->
 	<div class="row">
 		<div class="span4">
-			<h2>Heading</h2>
-			<p>Donec id elit non mi porta gravida at eget metus. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus. Etiam porta sem malesuada magna mollis euismod. Donec sed odio dui. </p>
-			<p><a class="btn" href="#">View details &raquo;</a></p>
+			<h2>Admin</h2>
+			<p>For now, the admin interface is still the same. It works good enough, although being horribly slow at times. There are a few shortcommings which should have been fixed, but for now, it'll do. If you're interrested in helping with mdb development, please <email><a href="mailto:kak-edb+mdb@studentersamfundet.no">email</a></email> us or let us otherwise know.</p>
+			<p><a class="btn" href="/admin">Go Admin &raquo;</a></p>
 		</div>
 		<div class="span4">
-			<h2>Heading</h2>
-			<p>Donec id elit non mi porta gravida at eget metus. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus. Etiam porta sem malesuada magna mollis euismod. Donec sed odio dui. </p>
-			<p><a class="btn" href="#">View details &raquo;</a></p>
+			<h2>MDB Features</h2>
+			<p>The MDB database currently contains a fair number of hosts, which I for one, would like to do something fun with! I've already started extending MDB with a few scripts which checks the alive status of hosts, and are interrested in more of these small-but-handy scripts. If you have an idea, please <email><a href="mailto:kak-edb+mdb@studentersafundet.no">mail</a></email> us with your suggestion.</p>
 		</div>
 		<div class="span4">
-			<h2>Heading</h2>
-			<p>Donec sed odio dui. Cras justo odio, dapibus ac facilisis in, egestas eget quam. Vestibulum id ligula porta felis euismod semper. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus.</p>
-			<p><a class="btn" href="#">View details &raquo;</a></p>
+			<h2>Information</h2>
+			<p>To view data from MDBs database, take a look at the info module. This module will present the data contained in the database as best as we can to make sure you get everything you want from MDB.</p>
+			<p><a class="btn" href="/info">Enter &raquo;</a></p>
 		</div>
 	</div>
 	<hr>
