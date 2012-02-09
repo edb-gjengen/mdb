@@ -635,6 +635,6 @@ def update_domain_serial_when_interface_deleted(sender, instance, **kwargs):
 		subnet.domain_serial = subnet.domain_serial + 1
 		subnet.save()
 
-@receiver(pre_save, sender=Domain)
-def update_domain_serial_when_domain_is_saved(sender, instance, **kwargs):
-	instance.domain_serial = format_domain_serial_and_add_one(instance.domain_serial)
+#@receiver(pre_save, sender=Domain)
+#def update_domain_serial_when_domain_is_saved(sender, instance, **kwargs):
+#	instance.domain_serial = format_domain_serial_and_add_one(instance.domain_serial)
