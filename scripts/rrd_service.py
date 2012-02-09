@@ -39,7 +39,7 @@ RRD_CREATE = "%s " \
 		"RRA:AVERAGE:0.5:72:124 "\
 		"RRA:AVERAGE:0.5:288:365"
 
-RRD_UPDATE = "%s --template ttl N:%s"
+RRD_UPDATE = "%s --template rtt N:%s"
 
 RRD_DIR = args.rrd_path
 RRDTOOL = "/usr/bin/rrdtool"

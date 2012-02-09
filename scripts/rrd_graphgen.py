@@ -44,7 +44,7 @@ RRD_GRAPH = 	"%s " \
 		"--right-axis 1:0 " \
 		"--x-grid MINUTE:10:HOUR:1:MINUTE:120:0:%%R " \
 		"--alt-y-grid --rigid " \
-		"DEF:roundtrip=%s:ttl:AVERAGE " \
+		"DEF:roundtrip=%s:rrd:AVERAGE " \
 		"LINE1:roundtrip#0000FF:\"latency(ms)\" "
 
 # RRD_GRAPH ARGS: <output_filename.png>, <title>, <rrd>
