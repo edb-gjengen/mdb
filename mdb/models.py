@@ -413,7 +413,7 @@ class HostType(models.Model):
 		return self.host_set.count()
 
 	class Meta:
-		ordering = ("host_type")
+		ordering = ("host_type",)
 
 class OsArchitecture(models.Model):
 	architecture = models.CharField(max_length=64)
