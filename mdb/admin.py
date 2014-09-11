@@ -71,9 +71,11 @@ class DomainAdmin(admin.ModelAdmin):
 	list_display = ['domain_name', 'domain_soa', 'domain_admin', 'num_records', 'domain_ipaddr']
         search_fields = ['domain_name']
 
-
 class HostTypeAdmin(admin.ModelAdmin):
 	list_display = ['host_type', 'description', 'num_members']
+
+class OperatingSystemAdmin(admin.ModelAdmin):
+	list_display = ['name', 'version', 'architecture']
 
 admin.site.register(Domain, DomainAdmin)
 admin.site.register(Host, HostAdmin)
@@ -82,7 +84,7 @@ admin.site.register(Ip6Subnet)
 admin.site.register(Ip6Address)
 admin.site.register(Nameserver)
 admin.site.register(MailExchange)
-admin.site.register(OperatingSystem)
+admin.site.register(OperatingSystem, OperatingSystemAdmin)
 admin.site.register(OsArchitecture)
 admin.site.register(HostType, HostTypeAdmin)
 admin.site.register(DhcpConfig)
