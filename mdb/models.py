@@ -412,6 +412,9 @@ class HostType(models.Model):
 	def num_members(self):
 		return self.host_set.count()
 
+	class Meta:
+		ordering = ("host_type")
+
 class OsArchitecture(models.Model):
 	architecture = models.CharField(max_length=64)
 
@@ -425,6 +428,9 @@ class OperatingSystem(models.Model):
 
 	def __unicode__(self):
 		return self.name + " " + self.version + " (" + unicode(self.architecture) + ")"
+
+	class Meta:
+		ordering = ("name","version")
 
 class Host(models.Model):
 	location = models.CharField(max_length=1024)
