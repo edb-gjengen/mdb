@@ -46,10 +46,10 @@ class Domain(models.Model):
 
 	def num_records(self):
 		size = {}
-		size["cname"] = self.domaincnamerecord_set.count()
-		size["srv"] = self.domainsrvrecord_set.count()
-		size["txt"] = self.domaintxtrecord_set.count()
-		size["a"]   = self.host_set.count()
+		size["cname"] = self.DomainCnameRecord_set.count()
+		size["srv"] = self.DomainSrvRecord_set.count()
+		size["txt"] = self.DomainTxtRecord_set.count()
+		size["a"]   = self.Host_set.count()
 		return size
 
 	num_records.short_description = "Num Records"
@@ -160,7 +160,7 @@ class DhcpConfig(models.Model):
 	serial = models.IntegerField()
 	active_serial = models.IntegerField()
 	name = models.CharField(max_length=255)
-	authoritative = models.BooleanField()
+	authoritative = models.BooleanField(default=False)
 	ddns_update_style = models.CharField(max_length=63)
 	default_lease_time = models.IntegerField(default=600)
 	max_lease_time = models.IntegerField(default=7200)
@@ -213,6 +213,9 @@ class DhcpConfig(models.Model):
 
 	def __unicode__(self):
 		return self.name
+
+	class Meta:
+		verbose_name = 'DHCP config'
 
 class Ip6Subnet(models.Model):
 	name = models.CharField(max_length=255)
@@ -276,6 +279,9 @@ class Ip6Subnet(models.Model):
 #				content += "%20s\tIN\tPTR\t%s.\n" % (addr.address.split(".")[3], hostname)
 
 		return content
+
+	class Meta:
+		verbose_name = 'IPv6 subnet'
 
 class Ip4Subnet(models.Model):
 
@@ -372,6 +378,9 @@ class Ip4Subnet(models.Model):
 
 		return content
 
+	class Meta:
+		verbose_name = 'IPv4 subnet'
+
 class DhcpOption(models.Model):
 	key = models.CharField(max_length=255)
 	value = models.CharField(max_length=255)
@@ -380,9 +389,15 @@ class DhcpOption(models.Model):
 	def __unicode__(self):
 		return self.key + " " + self.value
 
+	class Meta:
+		verbose_name = 'DHCP option'
+
 class DhcpCustomField(models.Model):
 	value = models.CharField(max_length=255)
 	ip4subnet = models.ForeignKey(Ip4Subnet)
+
+	class meta:
+		verbose_name = 'DHCP custom field'
 
 class Ip4Address(models.Model):
 	subnet = models.ForeignKey(Ip4Subnet)
@@ -401,6 +416,9 @@ class Ip4Address(models.Model):
 
 	assigned_to_host.short_description = "Assigned to Host"
 
+	class Meta:
+		verbose_name = 'IPv4 address'
+		verbose_name_plural = 'IPv4 addresses'
 
 class HostType(models.Model):
 	host_type = models.CharField(max_length=64)
@@ -421,6 +439,9 @@ class OsArchitecture(models.Model):
 	def __unicode__(self):
 		return self.architecture
 
+	class Meta:
+		verbose_name = 'OS architecture'
+
 class OperatingSystem(models.Model):
 	name = models.CharField(max_length=256)
 	version = models.CharField(max_length=64)
@@ -430,7 +451,7 @@ class OperatingSystem(models.Model):
 		return self.name + " " + self.version + " (" + unicode(self.architecture) + ")"
 
 	class Meta:
-		ordering = ("name","version")
+		ordering = ("name", "version")
 
 class Host(models.Model):
 	location = models.CharField(max_length=1024)
@@ -442,11 +463,11 @@ class Host(models.Model):
 	description = models.CharField(max_length=1024)
 	created_date = models.DateTimeField(auto_now_add=True)
 	host_type = models.ForeignKey(HostType)
-	virtual = models.BooleanField()
+	virtual = models.BooleanField(default=False)
 	operating_system = models.ForeignKey(OperatingSystem)
 
-	request_kerberos_principal = models.BooleanField()
-	kerberos_principal_created = models.BooleanField(editable=False)
+	request_kerberos_principal = models.BooleanField(default=False)
+	kerberos_principal_created = models.BooleanField(default=False, editable=False)
 	kerberos_principal_name = models.CharField(max_length = 256, editable=False)
 	kerberos_principal_created_date = models.DateTimeField(null=True, blank=True, editable=False)
 
@@ -502,7 +523,7 @@ class Interface(models.Model):
 	name = models.CharField(max_length=128)
 	macaddr = models.CharField(max_length=17)
 	pxe_filename = models.CharField(max_length=64, blank=True)
-	dhcp_client = models.BooleanField()
+	dhcp_client = models.BooleanField(default=False)
 	host = models.ForeignKey(Host)
 	ip4address = models.ForeignKey(Ip4Address, blank=True, null=True, unique=True)
 	created_date = models.DateTimeField(auto_now_add=True)
@@ -525,6 +546,9 @@ class Ip6Address(models.Model):
 	def __unicode__(self):
 		return "%s (%s on %s)" % (self.full_address(), self.interface.name, self.interface.host.hostname)
 
+	class Meta:
+		verbose_name = 'IPv6 address'
+		verbose_name_plural = 'IPv6 addresses'
 
 def format_domain_serial_and_add_one(serial):
 	today = datetime.datetime.now()
