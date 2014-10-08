@@ -10,7 +10,7 @@ Setup environment:
 	(venv)mdb$ pip install -r requirements.txt
 
 Create a config file:
-	mdb$ cp settings-sample.py settings.py
+	mdb$ cp mdb/settings-sample.py mdb/settings.py
 	# Edit settings.py with your favorite editor
 
 Run the server:
