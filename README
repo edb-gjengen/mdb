@@ -1,2 +1,17 @@
-A Django app for managing machines at DNS.
+A Django app for managing computer equipment.
+Generates DHCP configs and zone files.
 
+Dependencies:
+	sudo apt-get install libmysqlclient-dev python-dev
+
+Setup environment:
+	mdb$ virtualenv venv
+	mdb$ . venv/bin/activate
+	(venv)mdb$ pip install -r requirements.txt
+
+Create a config file:
+	mdb$ cp settings-sample.py settings.py
+	# Edit settings.py with your favorite editor
+
+Run the server:
+	(venv)mdb$ python manage.py runserver
