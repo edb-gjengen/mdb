@@ -5,6 +5,7 @@ import os
 import sys
 from django.core.management.base import BaseCommand, CommandError
 from django.core.mail import mail_admins
+from optparse import make_option
 from commands import getstatusoutput
 from mdb.models import *
 
