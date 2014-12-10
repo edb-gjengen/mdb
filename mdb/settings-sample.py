@@ -4,7 +4,6 @@ DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 
 ADMINS = (
-    ('Tor Martin Slaaen', 'tormsl@gmail.com'),
     ('Neuf System Administrator', 'sysadmin@neuf.no'),
 )
 
@@ -117,6 +116,7 @@ INSTALLED_APPS = (
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'mdb',
+    'suit',
     'django.contrib.admin',
 )
 
@@ -149,3 +149,38 @@ LOGGING = {
 EMAIL_HOST = 'snes.neuf.no'
 EMAIL_PORT = 25
 
+
+# for django-suit
+from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS as TCP
+
+TEMPLATE_CONTEXT_PROCESSORS = TCP + (
+    'django.core.context_processors.request',
+)
+
+# django-suit configuration
+SUIT_CONFIG = {
+    # header
+    'ADMIN_NAME': 'MDB',
+    'HEADER_DATE_FORMAT': 'l, Y-m-d',
+    'HEADER_TIME_FORMAT': 'H:i',
+
+    # forms
+    # 'SHOW_REQUIRED_ASTERISK': True,  # Default True
+    # 'CONFIRM_UNSAVED_CHANGES': True, # Default True
+
+    # menu
+    'SEARCH_URL': '/admin/mdb/host/',
+    # 'MENU_ICONS': {
+    #    'sites': 'icon-leaf',
+    #    'auth': 'icon-lock',
+    # },
+    # 'MENU_OPEN_FIRST_CHILD': True, # Default True
+    # 'MENU_EXCLUDE': ('auth.group',),
+    'MENU': (
+        {'app': 'mdb', 'label': 'MDB', 'url': 'mdb.host'},
+        {'label': 'Settings', 'icon':'icon-cog', 'models': ('auth.user', 'auth.group')},
+    ),
+
+    # misc
+    'LIST_PER_PAGE': 30
+}
