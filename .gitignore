@@ -4,3 +4,5 @@ temp
 *.log
 settings.py
 dns_mdb.db
+/.idea
+/venv
