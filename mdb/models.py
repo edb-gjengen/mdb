@@ -46,11 +46,13 @@ class Domain(models.Model):
         return self.domain_name
 
     def num_records(self):
-        size = {}
-        size["cname"] = self.domaincnamerecord_set.count()
-        size["srv"] = self.domainsrvrecord_set.count()
-        size["txt"] = self.domaintxtrecord_set.count()
-        size["a"] = self.domainarecord_set.count()
+        host_a_records = Host.objects.filter(interface__domain=self).count()
+        size = {
+            "cname": self.domaincnamerecord_set.count(),
+            "srv": self.domainsrvrecord_set.count(),
+            "txt": self.domaintxtrecord_set.count(),
+            "a": self.domainarecord_set.count() + host_a_records
+        }
         return size
 
     num_records.short_description = "Num Records"
