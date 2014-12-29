@@ -47,16 +47,16 @@ class Domain(models.Model):
 
     def num_records(self):
         size = {}
-        size["cname"] = self.DomainCnameRecord_set.count()
-        size["srv"] = self.DomainSrvRecord_set.count()
-        size["txt"] = self.DomainTxtRecord_set.count()
-        size["a"] = self.Host_set.count()
+        size["cname"] = self.domaincnamerecord_set.count()
+        size["srv"] = self.domainsrvrecord_set.count()
+        size["txt"] = self.domaintxtrecord_set.count()
+        size["a"] = self.domainarecord_set.count()
         return size
 
     num_records.short_description = "Num Records"
 
     def __eq__(self, other):
-        if not other:
+        if not other or not hasattr(other, 'domain_name'):
             return False
         return self.domain_name == other.domain_name
 
@@ -550,6 +550,7 @@ class Host(models.Model):
             addresses.append(interface.ip4address.address)
         return addresses
 
+
 class Interface(models.Model):
     name = models.CharField(max_length=128)
     macaddr = models.CharField(max_length=17)
@@ -565,6 +566,7 @@ class Interface(models.Model):
 
     def ipv6_enabled(self):
         return self.ip6address_set.count() > 0
+
 
 class Ip6Address(models.Model):
     subnet = models.ForeignKey(Ip6Subnet)
