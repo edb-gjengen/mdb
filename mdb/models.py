@@ -425,8 +425,8 @@ class DhcpCustomField(models.Model):
 class Ip4Address(models.Model):
     subnet = models.ForeignKey(Ip4Subnet)
     address = models.IPAddressField()
-    last_contact = models.DateTimeField()
-    ping_avg_rtt = models.FloatField()
+    last_contact = models.DateTimeField(null=True, blank=True)
+    ping_avg_rtt = models.FloatField(null=True, blank=True)
 
     def __unicode__(self):
         if self.interface_set.count() == 0:
