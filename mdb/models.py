@@ -429,6 +429,7 @@ class Ip4Address(models.Model):
     ping_avg_rtt = models.FloatField(null=True, blank=True)
 
     def __unicode__(self):
+        # FIXME needs optimizing, runs a SQL query for each run
         if self.interface_set.count() == 0:
             return self.address
         else:
