@@ -18,6 +18,7 @@ class HostAdmin(admin.ModelAdmin):
     inlines = [InterfaceInline]
     list_display = ['hostname', 'owner', 'host_type', 'location', 'mac_addresses', 'ip_addresses', 'in_domain',
                     'ipv6_enabled']
+    list_filter = ['host_type', 'owner', 'location']
     readonly_fields = ['kerberos_principal_name', 'kerberos_principal_created_date',
                        'kerberos_principal_created']
     search_fields = ['hostname', 'location', 'interface__macaddr', 'interface__ip4address__address']
