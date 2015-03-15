@@ -1,8 +1,9 @@
 from __future__ import with_statement
-from contextlib import closing
 
+import os
 import sys
-from django.core.management.base import BaseCommand, CommandError
+from difflib import context_diff
+from django.core.management.base import BaseCommand
 from django.core.mail import mail_admins
 from optparse import make_option
 from commands import getstatusoutput
@@ -23,7 +24,7 @@ class Command(BaseCommand):
                     action='store_true',
                     dest='force',
                     default=False,
-                    help='Write to output even if serial is unchanged.'),
+                    help='Write zone files even if serial is unchanged.'),
         make_option('--restart',
                     action='store_true',
                     dest='restart',
@@ -35,8 +36,7 @@ class Command(BaseCommand):
         output = options['output'] if options['output'] else sys.stdout
         force = options['force']
         restart = options['restart']
-
-        dhcpd_init = "/etc/init.d/dhcp3-server"
+        restart_command = "/etc/init.d/dhcp3-server restart"
 
         config = DhcpConfig.objects.filter(name="default").get()
 
@@ -45,27 +45,52 @@ class Command(BaseCommand):
             print "Nothing to do, serial is the same: %s" % config.serial
             sys.exit(0)
 
-        # write config
+        # write to stdout
         if output == sys.stdout:
             print config.dhcpd_configuration()
-        else:
-            with closing(open(output, 'w')) as f:
-                f.write(config.dhcpd_configuration())
+            print 'Not writing to file, serial not updated'
+            return
+
+        # read current file contents
+        try:
+            with open(output, 'r') as f:
+                old = f.read()
+        except IOError:
+            old = ''
+
+        # write to file
+        new = config.dhcpd_configuration()
+        with open(output, 'w') as f:
+            f.write(new)
+
+        # calculate diff
+        diff = "\n".join(context_diff(
+            a=old.splitlines(),
+            b=new.splitlines(),
+            fromfile=config.active_serial,
+            tofile=config.serial,
+            lineterm=''))
+
+        print diff
 
         # update serial
+        old_serial = config.active_serial
         config.active_serial = config.serial
         config.save()
 
         # restart the dhcp server?
         if restart:
-            status, output = getstatusoutput("%s restart" % dhcpd_init)
+            status, output = getstatusoutput(restart_command)
             if status != 0:
                 mail_admins(
-                    "Failed to restart dhcp3-server",
-                    "Failed to restart dhcp3-server, please inspect...\n\n" + output)
+                    "FAIL: dhcpd %s -> %s" % (old_serial, config.active_serial),
+                    "Failed to restart dhcp3-server, please inspect...\n\n",
+                    "%s@%s# %s" % (os.getlogin(), os.uname()[1], restart_command) +
+                    "\n%s\n\n%s" % (output, diff))
                 sys.exit(1)
             else:
                 mail_admins(
-                    "Update dhcpd configuration success!",
-                    "Updated dhcpd configuration to serial %d." % config.active_serial)
+                    "Success: dhcpd %s -> %s" % (old_serial, config.active_serial),
+                    "Updated dhcpd configuration to serial %d\n\n" % config.active_serial +
+                    "%s" % diff)
                 sys.exit(0)

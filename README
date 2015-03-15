@@ -2,7 +2,7 @@ A Django app for managing computer equipment.
 Generates DHCP configs and zone files.
 
 Dependencies:
-	sudo apt-get install libmysqlclient-dev python-dev libldap2-dev libsasl2-dev
+	sudo apt-get install libmysqlclient-dev python-dev libldap2-dev libsasl2-dev bind9utils
 
 Setup environment:
 	mdb$ virtualenv venv

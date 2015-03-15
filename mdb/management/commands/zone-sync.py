@@ -1,9 +1,10 @@
 from __future__ import with_statement
-from contextlib import closing
 
 import os
 import sys
-from django.core.management.base import BaseCommand, CommandError
+from itertools import chain
+from difflib import context_diff
+from django.core.management.base import BaseCommand
 from django.core.mail import mail_admins
 from optparse import make_option
 from commands import getstatusoutput
@@ -17,170 +18,140 @@ class Command(BaseCommand):
     option_list = BaseCommand.option_list + (
         make_option('--debug',
                     action='store_true',
-                    dest='force',
+                    dest='debug',
                     default=False,
-                    help='Debug mode.'),
+                    help='Debug mode. Writes to /tmp and does not reload.'),
     )
 
+    bind_bin = "/etc/init.d/bind9"
+    reload_command = "%s reload" % bind_bin
+    checkzone_bin = "/usr/sbin/named-checkzone"
+    checkzone_dir = "/tmp/mdb-checkzone"
+    debug = False
+    debug_dir = '/tmp/mdb-debug'
+    changes = {}
+
     def handle(self, *args, **options):
-        debug = options['debug']
+        self.debug = debug = options['debug']
 
-        bind_init = "/etc/init.d/bind9 %s"
+        # do the binaries exist?
+        for f in (self.checkzone_bin, self.bind_bin):
+            if not os.path.isfile(f):
+                print "ERROR: no such file %s, exiting..." % f
+                if not debug:
+                    sys.exit(1)
 
-        error_log_file = "/tmp/zonecheck/zonecheck-fail-%s-%s"
+        # create directories if needed
+        os.path.isdir(self.checkzone_dir) or os.mkdir(self.checkzone_dir)
+        debug and (os.path.isdir(self.debug_dir) or os.mkdir(self.debug_dir))
 
-        zone_check_command = "/usr/sbin/named-checkzone %s %s"
-        zone_check_temp_dir = "/tmp/zonecheck"
-        zone_check_temp_file = "%s/%s" % (zone_check_temp_dir, "zone")
-
-        debug = False
-
-        if not os.path.isfile((zone_check_command % ("", "")).strip()):
-            print "ERROR: cannot find zone checking tool, exiting..."
-            if not debug:
-                sys.exit(1)
-
-        if not os.path.isfile((bind_init % "").strip()):
-            print "ERROR: cannot find bind init script, exiting..."
-            if not debug:
-                sys.exit(1)
-
-        if not os.path.isdir(zone_check_temp_dir):
-            os.mkdir(zone_check_temp_dir)
-
-        reload_bind = False
-
-        for domain in Domain.objects.all():
-            if domain.domain_serial == domain.domain_active_serial and not debug:
+        # update zones with new serials
+        for zone in chain(Domain.objects.all(),
+                          Ip4Subnet.objects.all(),
+                          Ip6Subnet.objects.all()):
+            if zone.domain_serial == zone.domain_active_serial:
                 continue
+            self.update_zone(zone)
 
-            print "updating domain %s [%d -> %d]" % (
-                domain.domain_name,
-                domain.domain_active_serial,
-                domain.domain_serial)
+        # join errors and diffs
+        errors = "\n\n\n".join(
+            [v['errors'] for k, v in self.changes.items() if v['errors']])
+        diffs = "\n\n\n".join(
+            [v['diff'] for k, v in self.changes.items() if v['diff']])
 
-            sys.stdout.write("\t- validating...")
-            zonecheck = open(zone_check_temp_file, "w")
-            zonecheck.write(domain.zone_file_contents())
-            zonecheck.close()
-
-            result = check_zone(domain.domain_name, zone_check_temp_file)
-            if result['value'] != 0:
-                sys.stdout.write("fail\n")
-                log = open(error_log_file % (
-                    domain.domain_name,
-                    domain.domain_serial), "w")
-                log.write(domain.zone_file_contents())
-                log.close()
-                continue
-
-            sys.stdout.write("ok\n")
-
-            sys.stdout.write("\t- writing zone file...")
-            zonefile = open(domain.domain_filename, "w")
-            zonefile.write(domain.zone_file_contents())
-            zonefile.close()
-            sys.stdout.write("ok\n")
-
-            reload_bind = True
-
-            if not debug:
-                domain.domain_active_serial = domain.domain_serial
-                domain.save()
-
-        for subnet in Ip4Subnet.objects.all():
-            if subnet.domain_serial == subnet.domain_active_serial and not debug:
-                continue
-            print "updating subnet %s [%d -> %d]" % (
-                subnet.domain_name,
-                subnet.domain_active_serial,
-                subnet.domain_serial)
-
-            sys.stdout.write("\t- validating...")
-            zonecheck = open(zone_check_temp_file, "w")
-            zonecheck.write(subnet.zone_file_contents())
-            zonecheck.close()
-            sys.stdout.write("ok\n")
-
-            result = check_zone(subnet.domain_name, zone_check_temp_file)
-            if result['value'] != 0:
-                sys.stdout.write("fail\n")
-                log = open(error_log_file % (
-                    subnet.domain_name,
-                    subnet.domain_serial), "w")
-                log.write(subnet.zone_file_contents())
-                log.close()
-                continue
-
-            sys.stdout.write("\t- writing zone file...")
-            zonefile = open(subnet.domain_filename, "w")
-            zonefile.write(subnet.zone_file_contents())
-            zonefile.close()
-            sys.stdout.write("ok\n")
-
-            reload_bind = True
-
-            if not debug:
-                subnet.domain_active_serial = subnet.domain_serial
-                subnet.save()
-
-        for subnet in Ip6Subnet.objects.all():
-            if subnet.domain_serial == subnet.domain_active_serial and not debug:
-                continue
-            print "updating subnet %s [%d -> %d]" % (
-                subnet.domain_name,
-                subnet.domain_active_serial,
-                subnet.domain_serial)
-
-            sys.stdout.write("\t- validating...")
-            zonecheck = open(zone_check_temp_file, "w")
-            zonecheck.write(subnet.zone_file_contents())
-            zonecheck.close()
-            sys.stdout.write("ok\n")
-
-            print subnet.zone_file_contents()
-
-            result = check_zone(subnet.domain_name, zone_check_temp_file)
-            if result['value'] != 0:
-                sys.stdout.write("fail\n")
-                log = open(error_log_file % (
-                    subnet.domain_name,
-                    subnet.domain_serial), "w")
-                log.write(subnet.zone_file_contents())
-                log.close()
-                continue
-
-            sys.stdout.write("\t- writing zone file...")
-            zonefile = open(subnet.domain_filename, "w")
-            zonefile.write(subnet.zone_file_contents())
-            zonefile.close()
-            sys.stdout.write("ok\n")
-
-            reload_bind = True
-
-            if not debug:
-                subnet.domain_active_serial = subnet.domain_serial
-                subnet.save()
-
-        if reload_bind and not debug:
-            sys.stdout.write("restarting bind...")
-            status, output = getstatusoutput(bind_init % "reload")
+        # reload and send email with changes
+        if self.changes and not debug:
+            sys.stdout.write("reloading bind... ")
+            status, output = getstatusoutput(self.reload_command)
             if status != 0:
                 sys.stdout.write("fail\n")
                 mail_admins(
-                    "Failed to reload bind",
-                    "Failed to reload bind, plase inspect...\n\n" + output)
+                    "FAIL: bind (%s changed zones)" % len(self.changes),
+                    "Failed to reload bind, please inspect...\n\n" +
+                    "%s@%s# %s" % (
+                        os.getlogin(), os.uname()[1], self.reload_command) +
+                    "\n%s\n\n\n%s\n\n\n%s" % (output, errors, diffs))
+                sys.exit(1)
             else:
                 sys.stdout.write("ok\n")
                 mail_admins(
-                    "Successfully updated bind zone files",
-                    "Bind zone files has been updated")
+                    "Success: bind (%s changed zones)" % len(self.changes),
+                    "Successfully updated bind zone files\n\n" +
+                    "%s\n\n%s" % (errors, diffs))
+                sys.exit(0)
 
+    def update_zone(self, zone):
+        zonetype = getattr(zone._meta, 'verbose_name', None) \
+            or zone._meta.model_name
 
-def check_zone(zone, filename):
-    status, output = getstatusoutput(zone_check_command % (zone, filename))
+        self.changes[zone.domain_name] = {
+            'old_serial': zone.domain_active_serial,
+            'new_serial': zone.domain_serial,
+            'success': False,
+            'errors': None,
+            'diff': None,
+        }
 
-    if debug and status != 0:
-        print output
+        print "updating %s %s [%d -> %d]" % (
+            zonetype,
+            zone.domain_name,
+            zone.domain_active_serial,
+            zone.domain_serial)
 
-    return {'value': status, 'output': output}
+        # generate zone file contents
+        new = zone.zone_file_contents()
+
+        # read current file contents
+        try:
+            with open(zone.domain_filename, 'r') as f:
+                old = f.read()
+        except IOError:
+            old = ''
+
+        # calculate diff
+        diff = "\n".join(context_diff(
+            a=old.splitlines(),
+            b=new.splitlines(),
+            fromfile=str(zone.domain_active_serial) + '-' + zone.domain_name,
+            tofile=str(zone.domain_serial) + '-' + zone.domain_name,
+            lineterm=''))
+        self.changes[zone.domain_name]['diff'] = diff
+
+        # validate with zonecheck
+        sys.stdout.write("\t- validating... ")
+        status, output = self.check_zone(zone, new)
+        if status != 0:
+            sys.stdout.write("fail\n")
+            self.changes[zone.domain_name]['errors'] = output
+            return False
+        sys.stdout.write("ok\n")
+
+        # write to zone file
+        sys.stdout.write("\t- writing zone file... ")
+
+        if not self.debug:
+            zonefile = zone.domain_filename
+        else:
+            zonefile = self.debug_dir + zone.domain_filename
+            path = "/".join(zonefile.split('/')[:-1])
+            os.path.isdir(path) or os.makedirs(path)
+
+        with open(zonefile, 'w') as f:
+            f.write(new)
+
+        # update serial
+        if not self.debug:
+            zone.domain_active_serial = zone.domain_serial
+            zone.save()
+
+        sys.stdout.write("ok\n")
+        self.changes[zone.domain_name]['success'] = True
+        return True
+
+    def check_zone(self, zone, contents):
+        zonefile = self.checkzone_dir + '/' + zone.domain_name
+        with open(zonefile, 'w') as f:
+            f.write(contents)
+
+        return getstatusoutput("%s %s %s" % (
+            self.checkzone_bin, zone.domain_name, zonefile))
