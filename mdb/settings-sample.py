@@ -4,7 +4,7 @@ DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 
 ADMINS = (
-    ('Neuf System Administrator', 'sysadmin@neuf.no'),
+    ('System Administrator', 'sysadmin@example.com'),
 )
 
 MANAGERS = ADMINS
@@ -12,10 +12,10 @@ MANAGERS = ADMINS
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3', # Add 'postgresql_psycopg2', 'postgresql', 'mysql', 'sqlite3' or 'oracle'.
-        'NAME': 'dns_mdb.db',                      # Or path to database file if using sqlite3.
-        'USER': 'dns_mdb',                      # Not used with sqlite3.
-        'PASSWORD': 'dns_mdb',                  # Not used with sqlite3.
-        'HOST': 'hel',                      # Set to empty string for localhost. Not used with sqlite3.
+        'NAME': 'mdb.db',                      # Or path to database file if using sqlite3.
+        'USER': 'mdb',                      # Not used with sqlite3.
+        'PASSWORD': 'mdb',                  # Not used with sqlite3.
+        'HOST': '',                      # Set to empty string for localhost. Not used with sqlite3.
         'PORT': '3306',                      # Set to empty string for default. Not used with sqlite3.
     }
 }
@@ -146,7 +146,8 @@ LOGGING = {
     }
 }
 
-EMAIL_HOST = 'snes.neuf.no'
+EMAIL_SUBJECT_PREFIX = 'MDB'
+EMAIL_HOST = 'smtp.example.com'
 EMAIL_PORT = 25
 
 
@@ -178,7 +179,11 @@ SUIT_CONFIG = {
     # 'MENU_EXCLUDE': ('auth.group',),
     'MENU': (
         {'app': 'mdb', 'label': 'MDB', 'url': 'mdb.host'},
-        {'label': 'Settings', 'icon':'icon-cog', 'models': ('auth.user', 'auth.group')},
+        {
+            'label': 'Settings',
+            'icon': 'icon-cog',
+            'models': ('auth.user', 'auth.group')
+        },
     ),
 
     # misc
