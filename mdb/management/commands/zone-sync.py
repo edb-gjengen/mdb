@@ -38,6 +38,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         self.debug = debug = options['debug']
+        force = options['force']
 
         # do the binaries exist?
         for f in (self.checkzone_bin, self.bind_bin):
