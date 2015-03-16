@@ -24,7 +24,7 @@ class Command(BaseCommand):
                     action='store_true',
                     dest='force',
                     default=False,
-                    help='Write zone files even if serial is unchanged.'),
+                    help='Write configuration even if serial is unchanged.'),
         make_option('--restart',
                     action='store_true',
                     dest='restart',

@@ -12,7 +12,7 @@ from mdb.models import *
 
 
 class Command(BaseCommand):
-    args = '[--debug]'
+    args = '[--force] [--debug]'
     help = 'Generates the bind configuration'
 
     option_list = BaseCommand.option_list + (
@@ -21,6 +21,11 @@ class Command(BaseCommand):
                     dest='debug',
                     default=False,
                     help='Debug mode. Writes to /tmp and does not reload.'),
+        make_option('--force',
+                    action='store_true',
+                    dest='force',
+                    default=False,
+                    help='Write zone files even if serial is unchanged.'),
     )
 
     bind_bin = "/etc/init.d/bind9"
@@ -49,7 +54,7 @@ class Command(BaseCommand):
         for zone in chain(Domain.objects.all(),
                           Ip4Subnet.objects.all(),
                           Ip6Subnet.objects.all()):
-            if zone.domain_serial == zone.domain_active_serial:
+            if zone.domain_serial == zone.domain_active_serial or force:
                 continue
             self.update_zone(zone)
 
