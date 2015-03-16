@@ -2,7 +2,7 @@ from django.db import models
 from django.db.models.signals import post_save, pre_save, pre_delete
 from django.dispatch import receiver
 
-from validators import validate_hostname
+from validators import validate_hostname, validate_macaddr
 
 import ipaddr
 import datetime
@@ -556,7 +556,7 @@ class Host(models.Model):
 
 class Interface(models.Model):
     name = models.CharField(max_length=128)
-    macaddr = models.CharField(max_length=17)
+    macaddr = models.CharField(max_length=17, validators=[validate_macaddr])
     pxe_filename = models.CharField(max_length=64, blank=True)
     dhcp_client = models.BooleanField(default=False)
     host = models.ForeignKey(Host)
