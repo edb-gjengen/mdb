@@ -71,19 +71,25 @@ class Command(BaseCommand):
             status, output = getstatusoutput(self.reload_command)
             if status != 0:
                 sys.stdout.write("fail\n")
-                mail_admins(
-                    "FAIL: bind (%s changed zones)" % len(self.changes),
+                message = (
                     "Failed to reload bind, please inspect...\n\n" +
                     "%s@%s# %s" % (
                         os.getlogin(), os.uname()[1], self.reload_command) +
                     "\n%s\n\n\n%s\n\n\n%s" % (output, errors, diffs))
+                mail_admins(
+                    subject="FAIL: bind (%s changed zones)" % len(self.changes),
+                    message=message,
+                    html_message='<pre>%s</pre>' % message)
                 sys.exit(1)
             else:
                 sys.stdout.write("ok\n")
-                mail_admins(
-                    "Success: bind (%s changed zones)" % len(self.changes),
+                message = (
                     "Successfully updated bind zone files\n\n" +
                     "%s\n\n%s" % (errors, diffs))
+                mail_admins(
+                    subject="Success: bind (%s changed zones)" % len(self.changes),
+                    message=message,
+                    html_message='<pre>%s</pre>' % message)
                 sys.exit(0)
 
     def update_zone(self, zone):

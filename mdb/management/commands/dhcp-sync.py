@@ -82,15 +82,21 @@ class Command(BaseCommand):
         if restart:
             status, output = getstatusoutput(restart_command)
             if status != 0:
-                mail_admins(
-                    "FAIL: dhcpd %s -> %s" % (old_serial, config.active_serial),
-                    "Failed to restart dhcp3-server, please inspect...\n\n",
+                message = (
+                    "Failed to restart dhcp3-server, please inspect...\n\n" +
                     "%s@%s# %s" % (os.getlogin(), os.uname()[1], restart_command) +
                     "\n%s\n\n%s" % (output, diff))
+                mail_admins(
+                    subject="FAIL: dhcpd %s -> %s" % (old_serial, config.active_serial),
+                    message=message,
+                    html_message='<pre>%s</pre>' % message)
                 sys.exit(1)
             else:
-                mail_admins(
-                    "Success: dhcpd %s -> %s" % (old_serial, config.active_serial),
+                message = (
                     "Updated dhcpd configuration to serial %d\n\n" % config.active_serial +
                     "%s" % diff)
+                mail_admins(
+                    subject="Success: dhcpd %s -> %s" % (old_serial, config.active_serial),
+                    message=message,
+                    html_message='<pre>%s</pre>' % message)
                 sys.exit(0)

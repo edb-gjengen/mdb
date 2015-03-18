@@ -146,7 +146,7 @@ LOGGING = {
     }
 }
 
-EMAIL_SUBJECT_PREFIX = 'MDB'
+EMAIL_SUBJECT_PREFIX = '[MDB] '
 EMAIL_HOST = 'smtp.example.com'
 EMAIL_PORT = 25
 
