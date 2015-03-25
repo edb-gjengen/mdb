@@ -57,13 +57,15 @@ class Command(BaseCommand):
                           Ip6Subnet.objects.all()):
             if zone.domain_serial == zone.domain_active_serial or force:
                 continue
-            self.update_zone(zone)
+            if self.update_zone(zone):
+                self.changes[zone.domain_name]['success'] = True
 
-        # join errors and diffs
+        # join errors, diffs and zone names
         errors = "\n\n\n".join(
             [v['errors'] for k, v in self.changes.items() if v['errors']])
         diffs = "\n\n\n".join(
             [v['diff'] for k, v in self.changes.items() if v['diff']])
+        zones = ", ".join(self.changes.keys())
 
         # reload and send email with changes
         if self.changes and not debug:
@@ -77,7 +79,7 @@ class Command(BaseCommand):
                         os.getlogin(), os.uname()[1], self.reload_command) +
                     "\n%s\n\n\n%s\n\n\n%s" % (output, errors, diffs))
                 mail_admins(
-                    subject="FAIL: bind (%s changed zones)" % len(self.changes),
+                    subject="FAIL: bind (%s changed: %s)" % (len(self.changes), zones),
                     message=message,
                     html_message='<pre>%s</pre>' % message)
                 sys.exit(1)
@@ -87,7 +89,7 @@ class Command(BaseCommand):
                     "Successfully updated bind zone files\n\n" +
                     "%s\n\n%s" % (errors, diffs))
                 mail_admins(
-                    subject="Success: bind (%s changed zones)" % len(self.changes),
+                    subject="Success: bind (%s changed: %s)" % (len(self.changes), zones),
                     message=message,
                     html_message='<pre>%s</pre>' % message)
                 sys.exit(0)
