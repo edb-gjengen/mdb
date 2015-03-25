@@ -36,7 +36,7 @@ class Command(BaseCommand):
         output = options['output'] if options['output'] else sys.stdout
         force = options['force']
         restart = options['restart']
-        restart_command = "/etc/init.d/dhcp3-server restart"
+        restart_command = "service isc-dhcp-server restart"
 
         config = DhcpConfig.objects.filter(name="default").get()
 
