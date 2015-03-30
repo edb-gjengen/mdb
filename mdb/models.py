@@ -649,8 +649,8 @@ def set_domain_name_for_subnet(sender, instance, **kwargs):
         instance.domain_name = "%s.in-addr.arpa" % rev
 
     # update it's own serial
-    if instance.domain_serial is not None:
-        instance.domain_serial = format_domain_serial_and_add_one(instance.domain_serial)
+    #if instance.domain_serial is not None:
+    #    instance.domain_serial = format_domain_serial_and_add_one(instance.domain_serial)
 
     # lets update the serial of the dhcp config
     # when the subnet is changed
