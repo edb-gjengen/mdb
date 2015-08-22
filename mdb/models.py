@@ -1,6 +1,9 @@
 from django.db import models
+from django.db.models import Count
 from django.db.models.signals import post_save, pre_save, pre_delete
 from django.dispatch import receiver
+from django.utils.translation import ugettext_lazy as _
+
 
 from validators import validate_hostname, validate_macaddr
 
@@ -418,7 +421,7 @@ class DhcpCustomField(models.Model):
     value = models.CharField(max_length=255)
     ip4subnet = models.ForeignKey(Ip4Subnet)
 
-    class meta:
+    class Meta:
         verbose_name = 'DHCP custom field'
 
 
@@ -429,16 +432,18 @@ class Ip4Address(models.Model):
     ping_avg_rtt = models.FloatField(null=True, blank=True)
 
     def __unicode__(self):
-        # FIXME needs optimizing, runs a SQL query for each run
-        if self.interface_set.count() == 0:
+        # FIXME: generates 2 SQL queries
+        _if = self.interface_set.all()
+        if not _if:
             return self.address
-        else:
-            return "%s (%s)" % (
-                self.address,
-                self.interface_set.get().host.hostname)
+
+        return "{} ({})".format(
+            self.address,
+            _if.get().host.hostname
+        )
 
     def assigned_to_host(self):
-        self.interface_set.get().host
+        return self.interface_set.get().host
 
     assigned_to_host.short_description = "Assigned to Host"
 
@@ -461,23 +466,24 @@ class HostType(models.Model):
         ordering = ("host_type",)
 
 
-class OsArchitecture(models.Model):
-    architecture = models.CharField(max_length=64)
-
-    def __unicode__(self):
-        return self.architecture
-
-    class Meta:
-        verbose_name = 'OS architecture'
-
-
 class OperatingSystem(models.Model):
+    OS_ARCHITECTURES = (
+        ('mips', _('MIPS')),
+        ('arm', _('ARM')),
+        ('broadcom', _('Broadcom')),
+        ('rc32300', _('RC32300')),
+        ('powerpc', _('PowerPC')),
+        ('powerpc403ga', _('PowerPC403GA')),
+        ('unknown', _('Unknown')),
+        ('x86_64', _('x86-64')),
+        ('i386', _('x86')),
+    )
     name = models.CharField(max_length=256)
     version = models.CharField(max_length=64)
-    architecture = models.ForeignKey(OsArchitecture)
+    arch = models.CharField(max_length=255, choices=OS_ARCHITECTURES, blank=True, null=True)
 
     def __unicode__(self):
-        return self.name + " " + self.version + " (" + unicode(self.architecture) + ")"
+        return self.name + " " + self.version + " (" + self.arch + ")"
 
     class Meta:
         ordering = ("name", "version")
@@ -498,60 +504,31 @@ class Host(models.Model):
 
     request_kerberos_principal = models.BooleanField(default=False)
     kerberos_principal_created = models.BooleanField(default=False, editable=False)
-    kerberos_principal_name = models.CharField(max_length = 256, editable=False)
+    kerberos_principal_name = models.CharField(max_length=256, editable=False)
     kerberos_principal_created_date = models.DateTimeField(null=True, blank=True, editable=False)
 
     def __unicode__(self):
         return self.hostname
 
     def in_domain(self):
-        domains = []
-        for interface in self.interface_set.all():
-            if interface.domain:
-                domains.append(unicode(interface.domain))
-        return ",".join(domains)
+        domains = self.interface_set.values_list('domain__domain_name', flat=True)
+        return u",".join(domains)
 
     in_domain.short_description = "in domains"
 
     def ipv6_enabled(self):
-        for interface in self.interface_set.all():
-            if interface.ipv6_enabled():
-                return True
-        return False
+        ipv6_ifs = self.interface_set.annotate(num_ipv6=Count('ip6address')).filter(num_ipv6__gt=0)
+        return ipv6_ifs.exists()
 
-        # ipv6_enabled.boolean = True
+    ipv6_enabled.boolean = True
 
     def mac_addresses(self):
-        addresses = []
-        for interface in self.interface_set.all():
-            if interface.macaddr is None:
-                continue
-            addresses.append(interface.macaddr)
+        addresses = self.interface_set.filter(macaddr__isnull=False).values_list('macaddr', flat=True)
         return ",".join(addresses)
 
     def ip_addresses(self):
-        addresses = []
-        for interface in self.interface_set.all():
-            if interface.ip4address is None:
-                continue
-            addresses.append(interface.ip4address.address)
+        addresses = self.interface_set.filter(ip4address__isnull=False).values_list('ip4address__address', flat=True)
         return ",".join(addresses)
-
-    def get_ip_addresses(self):
-        addresses = []
-        for interface in self.interface_set.all():
-            if interface.ip4address is None:
-                continue
-            addresses.append(interface.ip4address.address)
-        return addresses
-
-    def get_ip_addresses_for_domain(self, domain):
-        addresses = []
-        for interface in self.interface_set.all():
-            if interface.ip4address is None:
-                continue
-            addresses.append(interface.ip4address.address)
-        return addresses
 
 
 class Interface(models.Model):
@@ -649,13 +626,13 @@ def set_domain_name_for_subnet(sender, instance, **kwargs):
         instance.domain_name = "%s.in-addr.arpa" % rev
 
     # update it's own serial
-    #if instance.domain_serial is not None:
-    #    instance.domain_serial = format_domain_serial_and_add_one(instance.domain_serial)
+    # if instance.domain_serial is not None:
+    #     instance.domain_serial = format_domain_serial_and_add_one(instance.domain_serial)
 
     # lets update the serial of the dhcp config
     # when the subnet is changed
     if instance.dhcp_config:
-#       instance.dhcp_config.serial = instance.dhcp_config.serial + 1
+        # instance.dhcp_config.serial = instance.dhcp_config.serial + 1
         instance.dhcp_config.serial = format_domain_serial_and_add_one(instance.dhcp_config.serial)
         instance.dhcp_config.save()
 
@@ -687,13 +664,11 @@ def update_domain_serial_when_change_to_host(sender, instance, created, **kwargs
     for interface in instance.interface_set.all():
         if interface.domain is not None:
             domain = interface.domain
-            domain.domain_serial = \
-                format_domain_serial_and_add_one(domain.domain_serial)
+            domain.domain_serial = format_domain_serial_and_add_one(domain.domain_serial)
             domain.save()
         if interface.ip4address is not None:
             subnet = interface.ip4address.subnet
-            subnet.domain_serial = \
-                format_domain_serial_and_add_one(subnet.domain_serial)
+            subnet.domain_serial = format_domain_serial_and_add_one(subnet.domain_serial)
             subnet.save()
 
 
@@ -701,14 +676,14 @@ def update_domain_serial_when_change_to_host(sender, instance, created, **kwargs
 def update_domain_serial_when_interface_deleted(sender, instance, **kwargs):
     if instance.domain is not None:
         domain = instance.domain
-        domain.domain_serial = domain.domain_serial + 1
+        domain.domain_serial += 1
         domain.save()
 
     if instance.ip4address is not None:
         subnet = instance.ip4address.subnet
-        subnet.domain_serial = subnet.domain_serial + 1
+        subnet.domain_serial += 1
         subnet.save()
 
-#@receiver(pre_save, sender=Domain)
-#def update_domain_serial_when_domain_is_saved(sender, instance, **kwargs):
-#   instance.domain_serial = format_domain_serial_and_add_one(instance.domain_serial)
+# @receiver(pre_save, sender=Domain)
+# def update_domain_serial_when_domain_is_saved(sender, instance, **kwargs):
+#    instance.domain_serial = format_domain_serial_and_add_one(instance.domain_serial)

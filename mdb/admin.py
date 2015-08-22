@@ -12,6 +12,9 @@ class InterfaceInline(admin.TabularInline):
     model = Interface
     extra = 0
 
+    def get_queryset(self, request):
+        return super(InterfaceInline, self).get_queryset(request).select_related()
+
 
 class HostAdmin(admin.ModelAdmin):
     ordering = ('hostname',)
@@ -27,21 +30,25 @@ class HostAdmin(admin.ModelAdmin):
             'fields': ('owner', 'location', 'description' )
         }),
         ('Hardware and Software Information', {
-            'fields': (('brand', 'model'), 'serial_number', ('hostname', 'host_type'), ('operating_system', 'virtual'))
+            'fields': (('brand', 'model', 'serial_number'), ('hostname', 'host_type'), ('operating_system', 'virtual'))
         }),
-        ('Domain and Kerberos Information', {
-            'description': 'If this host is a member of the LDAP domain, you need to tick the request kerberos principal checkbox. A principal will then be created for the host.',
-            'classes': ['collapse'],
-            'fields': ('request_kerberos_principal', 'kerberos_principal_created',
-                       ('kerberos_principal_name', 'kerberos_principal_created_date'))
-        }),
+        # FIXME: Not in use
+        # ('Domain and Kerberos Information', {
+        #     'description': 'If this host is a member of the LDAP domain, you need to tick the request kerberos principal checkbox. A principal will then be created for the host.',
+        #     'classes': ['collapse'],
+        #     'fields': ('request_kerberos_principal', 'kerberos_principal_created',
+        #                ('kerberos_principal_name', 'kerberos_principal_created_date'))
+        # }),
     )
+
+    def get_queryset(self, request):
+        return super(HostAdmin, self).get_queryset(request).select_related()
 
 
 class Ip4AddressInline(admin.TabularInline):
     model = Ip4Address
     extra = 0
-    readonly_fields = ['address']
+    readonly_fields = ['address', 'assigned_to_host']
 
 
 class DhcpOptionInline(admin.TabularInline):
@@ -57,6 +64,10 @@ class DhcpCustomFieldInline(admin.TabularInline):
 class SubnetAdmin(admin.ModelAdmin):
     list_display = ['name', 'network', 'netmask', 'num_addresses', 'broadcast_address', 'first_address', 'last_address']
     inlines = [DhcpOptionInline, DhcpCustomFieldInline, Ip4AddressInline]
+
+    def get_queryset(self, request):
+        # TODO: optimize
+        return super(SubnetAdmin, self).get_queryset(request)
 
 
 class DomainSrvRecordInline(admin.TabularInline):
@@ -90,7 +101,7 @@ class HostTypeAdmin(admin.ModelAdmin):
 
 
 class OperatingSystemAdmin(admin.ModelAdmin):
-    list_display = ['name', 'version', 'architecture']
+    list_display = ['name', 'version', 'arch']
 
 
 admin.site.register(Domain, DomainAdmin)
@@ -101,7 +112,6 @@ admin.site.register(Ip6Address)
 admin.site.register(Nameserver)
 admin.site.register(MailExchange)
 admin.site.register(OperatingSystem, OperatingSystemAdmin)
-admin.site.register(OsArchitecture)
 admin.site.register(HostType, HostTypeAdmin)
 admin.site.register(DhcpConfig)
 admin.site.register(DhcpOption)
