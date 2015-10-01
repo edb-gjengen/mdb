@@ -72,13 +72,12 @@ INSTALLED_APPS = (
     'django.contrib.sites',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'mdb',
     'suit',
     'django.contrib.admin',
-)
+    'rest_framework',
 
-# Defines a test runner
-TEST_RUNNER = 'django.test.runner.DiscoverRunner'
+    'mdb',
+)
 
 EMAIL_SUBJECT_PREFIX = '[MDB] '
 

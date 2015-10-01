@@ -7,9 +7,9 @@ from mdb.api.views import ValidatePuppetHostSecret
 admin.autodiscover()
 
 urlpatterns = [
-    url(r'^$', RedirectView.as_view(url='admin/')),
+    url(r'^$', RedirectView.as_view(url='admin/', permanent=True)),
     url(r'^admin/', include(admin.site.urls)),
-    url(r'^api/validate-host-secret', ValidatePuppetHostSecret.as_view(), name='api-validate-host-secret')
+    url(r'^api/validate-host-secret/', ValidatePuppetHostSecret.as_view(), name='api-validate-host-secret')
 ]
 
 urlpatterns += staticfiles_urlpatterns()
