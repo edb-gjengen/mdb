@@ -1,16 +1,12 @@
-"""
-This file demonstrates writing tests using the unittest module. These will pass
-when you run "manage.py test".
-
-Replace this with more appropriate tests for your application.
-"""
-
-from django.test import TestCase
+from django.core.urlresolvers import reverse
+from rest_framework.test import APITestCase
 
 
-class SimpleTest(TestCase):
-    def test_basic_addition(self):
-        """
-        Tests that 1 + 1 always equals 2.
-        """
-        self.assertEqual(1 + 1, 2)
+class APITestCases(APITestCase):
+    def test_validate_puppet_host_by_secret(self):
+        data = {
+            'secret': 'something',
+            'certname': 'arnold.neuf.no'
+        }
+        res = self.client.post(reverse('api-validate-host-secret'), data)
+        self.fail()

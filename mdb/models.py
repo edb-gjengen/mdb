@@ -2,31 +2,36 @@ from django.db import models
 from django.db.models import Count
 from django.db.models.signals import post_save, pre_save, pre_delete
 from django.dispatch import receiver
+from django.utils.encoding import python_2_unicode_compatible
+from django.utils.six import u
 from django.utils.translation import ugettext_lazy as _
 
 
-from validators import validate_hostname, validate_macaddr
+from mdb.validators import validate_hostname, validate_macaddr
 
-import ipaddr
+import ipaddress
 import datetime
 import re
 
 
+@python_2_unicode_compatible
 class Nameserver(models.Model):
     hostname = models.CharField(max_length=256)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.hostname
 
 
+@python_2_unicode_compatible
 class MailExchange(models.Model):
     priority = models.IntegerField()
     hostname = models.CharField(max_length=256)
 
-    def __unicode__(self):
+    def __str__(self):
         return "(" + str(self.priority) + ") " + self.hostname
 
 
+@python_2_unicode_compatible
 class Domain(models.Model):
     domain_name = models.CharField(max_length=256)
     domain_soa = models.CharField(max_length=256)
@@ -38,14 +43,14 @@ class Domain(models.Model):
     domain_expire = models.IntegerField(default=604800)
     domain_minimum_ttl = models.IntegerField(default=86400)
     domain_admin = models.EmailField()
-    domain_ipaddr = models.IPAddressField()
+    domain_ipaddr = models.GenericIPAddressField(protocol='IPv4')
     domain_filename = models.CharField(max_length=256)
     created_date = models.DateTimeField(auto_now_add=True)
 
     domain_nameservers = models.ManyToManyField(Nameserver)
     domain_mailexchanges = models.ManyToManyField(MailExchange)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.domain_name
 
     def num_records(self):
@@ -63,6 +68,7 @@ class Domain(models.Model):
     def __eq__(self, other):
         if not other or not hasattr(other, 'domain_name'):
             return False
+
         return self.domain_name == other.domain_name
 
     def zone_file_contents(self):
@@ -93,12 +99,12 @@ class Domain(models.Model):
         content += "; SRV records\n"
 
         for srv in self.domainsrvrecord_set.all():
-            content += unicode(srv) + "\n"
+            content += u(srv) + "\n"
 
         content += "; A records\n"
 
         for a in self.domainarecord_set.all():
-            content += unicode(a) + "\n"
+            content += u(a) + "\n"
 
         content += "; CNAME records \n"
 
@@ -108,7 +114,7 @@ class Domain(models.Model):
         content += "; TXT records \n"
 
         for txt in self.domaintxtrecord_set.all():
-            content += unicode(txt) + "\n"
+            content += u(txt) + "\n"
 
         content += "; HOST records\n"
 
@@ -126,6 +132,7 @@ class Domain(models.Model):
         return content
 
 
+@python_2_unicode_compatible
 class DomainSrvRecord(models.Model):
     srvce = models.CharField(max_length=64)
     prot = models.CharField(max_length=64)
@@ -137,42 +144,46 @@ class DomainSrvRecord(models.Model):
     domain = models.ForeignKey(Domain)
     created_date = models.DateTimeField(auto_now_add=True)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.srvce + "." + self.prot + "." + self.name + ". IN SRV " \
             + str(self.priority) + " " + str(self.weight) + " " + \
             str(self.port) + " " + self.target + "."
 
 
+@python_2_unicode_compatible
 class DomainTxtRecord(models.Model):
     name = models.CharField(max_length=256)
     target = models.CharField(max_length=256)
     domain = models.ForeignKey(Domain)
     created_date = models.DateTimeField(auto_now_add=True)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name + " TXT " + self.target
 
 
+@python_2_unicode_compatible
 class DomainCnameRecord(models.Model):
     name = models.CharField(max_length=256)
     target = models.CharField(max_length=256)
     domain = models.ForeignKey(Domain)
     created_date = models.DateTimeField(auto_now_add=True)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name + " IN CNAME " + self.target
 
 
+@python_2_unicode_compatible
 class DomainARecord(models.Model):
     name = models.CharField(max_length=256)
     target = models.CharField(max_length=256)
     domain = models.ForeignKey(Domain)
     created_date = models.DateTimeField(auto_now_add=True)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name + " IN A " + self.target
 
 
+@python_2_unicode_compatible
 class DhcpConfig(models.Model):
     serial = models.IntegerField()
     active_serial = models.IntegerField()
@@ -229,13 +240,14 @@ class DhcpConfig(models.Model):
 
         return content
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
     class Meta:
         verbose_name = 'DHCP config'
 
 
+@python_2_unicode_compatible
 class Ip6Subnet(models.Model):
     name = models.CharField(max_length=255)
     network = models.CharField(max_length=255)
@@ -254,7 +266,7 @@ class Ip6Subnet(models.Model):
     domain_admin = models.EmailField()
     domain_filename = models.CharField(max_length=256)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.network + " (" + self.name + ")"
 
     def zone_file_contents(self, generate_unassigned=False):
@@ -292,7 +304,7 @@ class Ip6Subnet(models.Model):
                 addr.interface.host.hostname,
                 addr.interface.domain.domain_name)
 
-            ip = ipaddr.IPv6Address(self.network + addr.address)
+            ip = ipaddress.IPv6Address(self.network + addr.address)
             ip = ".".join(ip.exploded.replace(":", "")[16:])[::-1]
             content += "%s\tPTR\t%s.\n" % (ip, hostname)
 
@@ -305,10 +317,11 @@ class Ip6Subnet(models.Model):
         verbose_name = 'IPv6 subnet'
 
 
+@python_2_unicode_compatible
 class Ip4Subnet(models.Model):
     name = models.CharField(max_length=256)
-    netmask = models.IPAddressField()
-    network = models.IPAddressField()
+    netmask = models.GenericIPAddressField(protocol='IPv4')
+    network = models.GenericIPAddressField(protocol='IPv4')
     created_date = models.DateTimeField(auto_now_add=True)
     domain_name = models.CharField(max_length=255, editable=False)
     domain_nameservers = models.ManyToManyField(Nameserver)
@@ -324,29 +337,29 @@ class Ip4Subnet(models.Model):
     domain_filename = models.CharField(max_length=256)
 
     dhcp_dynamic = models.BooleanField(default=False)
-    dhcp_dynamic_start = models.IPAddressField(null=True, blank=True)
-    dhcp_dynamic_end = models.IPAddressField(null=True, blank=True)
+    dhcp_dynamic_start = models.GenericIPAddressField(protocol='IPv4', null=True, blank=True)
+    dhcp_dynamic_end = models.GenericIPAddressField(protocol='IPv4', null=True, blank=True)
     dhcp_config = models.ForeignKey(DhcpConfig)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.network + " (" + self.name + ")"
 
     def num_addresses(self):
-        subnet = ipaddr.IPv4Network(self.network + "/" + self.netmask)
+        subnet = ipaddress.IPv4Network(self.network + "/" + self.netmask)
         return subnet.numhosts
 
     def broadcast_address(self):
-        subnet = ipaddr.IPv4Network(self.network + "/" + self.netmask)
+        subnet = ipaddress.IPv4Network(self.network + "/" + self.netmask)
         return subnet.broadcast
 
     def first_address(self):
-        subnet = ipaddr.IPv4Network(self.network + "/" + self.netmask)
+        subnet = ipaddress.IPv4Network(self.network + "/" + self.netmask)
         return subnet.iterhosts().next()
 
     def last_address(self):
-        subnet = ipaddr.IPv4Network(self.network + "/" + self.netmask)
+        subnet = ipaddress.IPv4Network(self.network + "/" + self.netmask)
         for curr in subnet.iterhosts():
-            pass  # horribly ineficcient
+            pass  # horribly inefficient
 
         return curr
 
@@ -405,18 +418,20 @@ class Ip4Subnet(models.Model):
         verbose_name = 'IPv4 subnet'
 
 
+@python_2_unicode_compatible
 class DhcpOption(models.Model):
     key = models.CharField(max_length=255)
     value = models.CharField(max_length=255)
     ip4subnet = models.ForeignKey(Ip4Subnet)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.key + " " + self.value
 
     class Meta:
         verbose_name = 'DHCP option'
 
 
+@python_2_unicode_compatible
 class DhcpCustomField(models.Model):
     value = models.CharField(max_length=255)
     ip4subnet = models.ForeignKey(Ip4Subnet)
@@ -425,22 +440,20 @@ class DhcpCustomField(models.Model):
         verbose_name = 'DHCP custom field'
 
 
+@python_2_unicode_compatible
 class Ip4Address(models.Model):
     subnet = models.ForeignKey(Ip4Subnet)
-    address = models.IPAddressField()
+    address = models.GenericIPAddressField(protocol='IPv4')
     last_contact = models.DateTimeField(null=True, blank=True)
     ping_avg_rtt = models.FloatField(null=True, blank=True)
 
-    def __unicode__(self):
+    def __str__(self):
         # FIXME: generates 2 SQL queries
         _if = self.interface_set.all()
         if not _if:
             return self.address
 
-        return "{} ({})".format(
-            self.address,
-            _if.get().host.hostname
-        )
+        return "{} ({})".format(self.address, _if.get().host.hostname)
 
     def assigned_to_host(self):
         return self.interface_set.get().host
@@ -452,11 +465,12 @@ class Ip4Address(models.Model):
         verbose_name_plural = 'IPv4 addresses'
 
 
+@python_2_unicode_compatible
 class HostType(models.Model):
     host_type = models.CharField(max_length=64)
     description = models.CharField(max_length=1024)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.host_type
 
     def num_members(self):
@@ -466,6 +480,7 @@ class HostType(models.Model):
         ordering = ("host_type",)
 
 
+@python_2_unicode_compatible
 class OperatingSystem(models.Model):
     OS_ARCHITECTURES = (
         ('mips', _('MIPS')),
@@ -482,13 +497,14 @@ class OperatingSystem(models.Model):
     version = models.CharField(max_length=64)
     arch = models.CharField(max_length=255, choices=OS_ARCHITECTURES, blank=True, null=True)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name + " " + self.version + " (" + self.arch + ")"
 
     class Meta:
         ordering = ("name", "version")
 
 
+@python_2_unicode_compatible
 class Host(models.Model):
     location = models.CharField(max_length=1024)
     brand = models.CharField(max_length=1024)
@@ -507,7 +523,7 @@ class Host(models.Model):
     kerberos_principal_name = models.CharField(max_length=256, editable=False)
     kerberos_principal_created_date = models.DateTimeField(null=True, blank=True, editable=False)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.hostname
 
     def in_domain(self):
@@ -531,23 +547,25 @@ class Host(models.Model):
         return ",".join(addresses)
 
 
+@python_2_unicode_compatible
 class Interface(models.Model):
     name = models.CharField(max_length=128)
     macaddr = models.CharField(max_length=17, validators=[validate_macaddr])
     pxe_filename = models.CharField(max_length=64, blank=True)
     dhcp_client = models.BooleanField(default=False)
     host = models.ForeignKey(Host)
-    ip4address = models.ForeignKey(Ip4Address, blank=True, null=True, unique=True)
+    ip4address = models.OneToOneField(Ip4Address, blank=True, null=True)
     created_date = models.DateTimeField(auto_now_add=True)
     domain = models.ForeignKey(Domain)
 
-    def __unicode__(self):
+    def __str__(self):
         return "%s (%s on %s)" % (self.macaddr, self.name, self.host.hostname)
 
     def ipv6_enabled(self):
         return self.ip6address_set.count() > 0
 
 
+@python_2_unicode_compatible
 class Ip6Address(models.Model):
     subnet = models.ForeignKey(Ip6Subnet)
     address = models.CharField(max_length=64)
@@ -556,7 +574,7 @@ class Ip6Address(models.Model):
     def full_address(self):
         return self.subnet.network + self.address
 
-    def __unicode__(self):
+    def __str__(self):
         return "%s (%s on %s)" % (
             self.full_address(),
             self.interface.name,
@@ -604,7 +622,7 @@ def create_ips_for_subnet(sender, instance, created, **kwargs):
     if not created:
         return
 
-    subnet = ipaddr.IPv4Network(instance.network + "/" + instance.netmask)
+    subnet = ipaddress.IPv4Network(instance.network + "/" + instance.netmask)
 
     for addr in subnet.iterhosts():
         address = Ip4Address(address=str(addr), subnet=instance)
@@ -642,7 +660,7 @@ def set_domain_name_for_ipv6_subnet(sender, instance, **kwargs):
     if len(instance.domain_name) > 0:
         return
 
-    network = ipaddr.IPv6Address("%s::" % instance.network)
+    network = ipaddress.IPv6Address("%s::" % instance.network)
     instance.domain_name = ".".join(network.exploded.replace(":", "")[:16])[::-1] + ".ip6.arpa"
 
 

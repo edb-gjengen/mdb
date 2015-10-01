@@ -6,7 +6,11 @@ from difflib import context_diff
 from django.core.management.base import BaseCommand
 from django.core.mail import mail_admins
 from optparse import make_option
-from commands import getstatusoutput
+try:
+    from subprocess import getstatusoutput
+except ImportError:
+    from commands import getstatusoutput
+
 from mdb.models import DhcpConfig
 
 
@@ -42,13 +46,13 @@ class Command(BaseCommand):
 
         # do we need to do anything?
         if config.serial == config.active_serial and not force:
-            print "Nothing to do, serial is the same: %s" % config.serial
+            print("Nothing to do, serial is the same: %s" % config.serial)
             sys.exit(0)
 
         # write to stdout
         if output == sys.stdout:
-            print config.dhcpd_configuration()
-            print 'Not writing to file, serial not updated'
+            print(config.dhcpd_configuration())
+            print('Not writing to file, serial not updated')
             return
 
         # read current file contents
@@ -71,7 +75,7 @@ class Command(BaseCommand):
             tofile=config.serial,
             lineterm=''))
 
-        print diff
+        print(diff)
 
         # update serial
         old_serial = config.active_serial

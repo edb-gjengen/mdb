@@ -2,7 +2,7 @@
 *.swp
 temp
 *.log
-settings.py
-dns_mdb.db
+local_settings.py
+db.sqlite3
 /.idea
 /venv
