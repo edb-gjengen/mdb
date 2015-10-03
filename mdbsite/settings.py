@@ -122,7 +122,10 @@ REST_FRAMEWORK = {
     'PAGINATE_BY': 10
 }
 
+MDB_PXE_TFTP_ROOT = '/var/lib/tftpboot/pxelinux/pxelinux.cfg/'
+MDB_PXE_PRESEED_URL = 'http://158.36.190.194/ubuntu/preseed_1404.cfg'
+
 try:
-    from local_settings import *
+    from .local_settings import *
 except ImportError:
     pass

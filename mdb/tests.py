@@ -1,8 +1,10 @@
 from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
-from mdb.models import Host
+from django.test import TestCase
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
+
+from mdb.models import Host
 
 
 class MyAPITestCases(APITestCase):
@@ -26,3 +28,11 @@ class MyAPITestCases(APITestCase):
         res = self.client.post(reverse('api-validate-host-secret'), data, format='json')
         self.assertEquals(res.status_code, 200, res.content)
         self.assertFalse(Host.objects.get(pk=self.host.pk).pxe_installable)
+
+
+class UnitTests(TestCase):
+    fixtures = ['test_data']
+
+    def test_host_as_pxe_files(self):
+        host = Host.objects.first()
+        self.assertEqual(len(host.as_pxe_files()), 1)
