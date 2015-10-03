@@ -20,17 +20,17 @@ class HostAdmin(admin.ModelAdmin):
     ordering = ('hostname',)
     inlines = [InterfaceInline]
     list_display = ['hostname', 'owner', 'host_type', 'location', 'mac_addresses', 'ip_addresses', 'in_domain',
-                    'ipv6_enabled']
-    list_filter = ['host_type', 'owner', 'location']
+                    'pxe_installable', 'ipv6_enabled']
+    list_filter = ['host_type', 'owner', 'location', 'pxe_installable']
     readonly_fields = ['kerberos_principal_name', 'kerberos_principal_created_date',
                        'kerberos_principal_created']
     search_fields = ['hostname', 'location', 'interface__macaddr', 'interface__ip4address__address']
     fieldsets = (
         ('Owner Information', {
-            'fields': ('owner', 'location', 'description' )
+            'fields': ('owner', 'location', 'description')
         }),
         ('Hardware and Software Information', {
-            'fields': (('brand', 'model', 'serial_number'), ('hostname', 'host_type'), ('operating_system', 'virtual'))
+            'fields': (('hostname', 'host_type'), ('pxe_key', 'pxe_installable'), ('brand', 'model'), 'serial_number', ('operating_system', 'virtual'))
         }),
         # FIXME: Not in use
         # ('Domain and Kerberos Information', {
