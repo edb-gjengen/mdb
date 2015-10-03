@@ -75,6 +75,7 @@ INSTALLED_APPS = (
     'suit',
     'django.contrib.admin',
     'rest_framework',
+    'rest_framework.authtoken',
 
     'mdb',
 )

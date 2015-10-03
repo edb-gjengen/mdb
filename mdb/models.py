@@ -346,19 +346,19 @@ class Ip4Subnet(models.Model):
 
     def num_addresses(self):
         subnet = ipaddress.IPv4Network(self.network + "/" + self.netmask)
-        return subnet.numhosts
+        return subnet.num_addresses
 
     def broadcast_address(self):
         subnet = ipaddress.IPv4Network(self.network + "/" + self.netmask)
-        return subnet.broadcast
+        return subnet.broadcast_address
 
     def first_address(self):
         subnet = ipaddress.IPv4Network(self.network + "/" + self.netmask)
-        return subnet.iterhosts().next()
+        return next(subnet.hosts())
 
     def last_address(self):
         subnet = ipaddress.IPv4Network(self.network + "/" + self.netmask)
-        for curr in subnet.iterhosts():
+        for curr in subnet.hosts():
             pass  # horribly inefficient
 
         return curr
@@ -448,15 +448,14 @@ class Ip4Address(models.Model):
     ping_avg_rtt = models.FloatField(null=True, blank=True)
 
     def __str__(self):
-        # FIXME: generates 2 SQL queries
-        _if = self.interface_set.all()
-        if not _if:
+        # FIXME: generates 2 SQL queries?
+        if not hasattr(self, 'interface'):
             return self.address
 
-        return "{} ({})".format(self.address, _if.get().host.hostname)
+        return "{} ({})".format(self.address, self.interface.host.hostname)
 
     def assigned_to_host(self):
-        return self.interface_set.get().host
+        return self.interface.host
 
     assigned_to_host.short_description = "Assigned to Host"
 
@@ -523,12 +522,15 @@ class Host(models.Model):
     kerberos_principal_name = models.CharField(max_length=256, editable=False)
     kerberos_principal_created_date = models.DateTimeField(null=True, blank=True, editable=False)
 
+    pxe_key = models.CharField(max_length=254, blank=True)
+    pxe_installable = models.BooleanField(default=False)
+
     def __str__(self):
         return self.hostname
 
     def in_domain(self):
         domains = self.interface_set.values_list('domain__domain_name', flat=True)
-        return u",".join(domains)
+        return ",".join(domains)
 
     in_domain.short_description = "in domains"
 
@@ -562,7 +564,7 @@ class Interface(models.Model):
         return "%s (%s on %s)" % (self.macaddr, self.name, self.host.hostname)
 
     def ipv6_enabled(self):
-        return self.ip6address_set.count() > 0
+        return self.ip6address_set.exists()
 
 
 @python_2_unicode_compatible
@@ -624,7 +626,7 @@ def create_ips_for_subnet(sender, instance, created, **kwargs):
 
     subnet = ipaddress.IPv4Network(instance.network + "/" + instance.netmask)
 
-    for addr in subnet.iterhosts():
+    for addr in subnet.hosts():
         address = Ip4Address(address=str(addr), subnet=instance)
         address.save()
 
