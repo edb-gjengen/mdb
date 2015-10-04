@@ -13,9 +13,9 @@ Dump test data:
 
     python manage.py dumpdata mdb --natural-foreign --indent=4 > mdb/fixtures/test_data.json
 
-
 ## Features
 
 * Creates DHCPD configuration files
 * Creates DNS zone files for BIND
-* TODO: Creates PXE config files (with random secret for use with Puppet autosign)
+* Creates PXE config files (with random secret for use with Puppet autosign)
+* Partial IPv6 support
