@@ -1,7 +1,6 @@
 from django.db import models
 from django.db.models import Count
 from django.utils.encoding import python_2_unicode_compatible
-from django.utils.six import u
 from django.utils.translation import ugettext_lazy as _
 from mdb.utils import host_as_pxe_files
 
@@ -96,12 +95,12 @@ class Domain(models.Model):
         content += "; SRV records\n"
 
         for srv in self.domainsrvrecord_set.all():
-            content += u(srv) + "\n"
+            content += srv.as_record() + "\n"
 
         content += "; A records\n"
 
         for a in self.domainarecord_set.all():
-            content += u(a) + "\n"
+            content += a.as_record() + "\n"
 
         content += "; CNAME records \n"
 
@@ -111,7 +110,7 @@ class Domain(models.Model):
         content += "; TXT records \n"
 
         for txt in self.domaintxtrecord_set.all():
-            content += u(txt) + "\n"
+            content += txt.as_record() + "\n"
 
         content += "; HOST records\n"
 
@@ -141,10 +140,20 @@ class DomainSrvRecord(models.Model):
     domain = models.ForeignKey(Domain)
     created_date = models.DateTimeField(auto_now_add=True)
 
+    def as_record(self):
+        return '{}.{}.{}. IN SRV {} {} {} {}.'.format(
+            self.srvce,
+            self.prot,
+            self.name,
+
+            self.priority,
+            self.weight,
+            self.port,
+            self.target
+        )
+
     def __str__(self):
-        return self.srvce + "." + self.prot + "." + self.name + ". IN SRV " \
-            + str(self.priority) + " " + str(self.weight) + " " + \
-            str(self.port) + " " + self.target + "."
+        return self.as_record()
 
 
 @python_2_unicode_compatible
@@ -154,8 +163,11 @@ class DomainTxtRecord(models.Model):
     domain = models.ForeignKey(Domain)
     created_date = models.DateTimeField(auto_now_add=True)
 
+    def as_record(self):
+        return '{} TXT {}'.format(self.name, self.target)
+
     def __str__(self):
-        return self.name + " TXT " + self.target
+        return self.as_record()
 
 
 @python_2_unicode_compatible
@@ -165,8 +177,11 @@ class DomainCnameRecord(models.Model):
     domain = models.ForeignKey(Domain)
     created_date = models.DateTimeField(auto_now_add=True)
 
+    def as_record(self):
+        return '{} IN CNAME {}'.format(self.name, self.target)
+
     def __str__(self):
-        return self.name + " IN CNAME " + self.target
+        return self.as_record()
 
 
 @python_2_unicode_compatible
@@ -176,8 +191,11 @@ class DomainARecord(models.Model):
     domain = models.ForeignKey(Domain)
     created_date = models.DateTimeField(auto_now_add=True)
 
+    def as_record(self):
+        return '{} IN A {}'.format(self.name, self.target)
+
     def __str__(self):
-        return self.name + " IN A " + self.target
+        return self.as_record()
 
 
 @python_2_unicode_compatible
