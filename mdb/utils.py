@@ -68,13 +68,12 @@ def get_pxe_filename(interface, filename_format='mac_addr'):
 
 
 def host_as_pxe_files(host):
-    """ Returns a list of filename,content for each host """
+    """ Returns a list of filename,content for each host interface with an IPv4 address """
     from mdb.models import Host
     assert isinstance(host, Host)
 
     pxe_files = []
-    ifs = host.interface_set.filter(dhcp_client=True)
-    for _if in ifs:
+    for _if in host.interface_set.exclude(ip4address__isnull=True):
         filename = get_pxe_filename(_if)
         content = render_pxelinux_cfg(_if, host)
         pxe_files.append((filename, content))

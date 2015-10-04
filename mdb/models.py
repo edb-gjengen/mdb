@@ -53,12 +53,12 @@ class Domain(models.Model):
     def num_records(self):
         host_a_records = Host.objects.filter(interface__domain=self).count()
         size = {
-            "cname": self.domaincnamerecord_set.count(),
-            "srv": self.domainsrvrecord_set.count(),
-            "txt": self.domaintxtrecord_set.count(),
-            "a": self.domainarecord_set.count() + host_a_records
+            "CNAME": self.domaincnamerecord_set.count(),
+            "SRV": self.domainsrvrecord_set.count(),
+            "TXT": self.domaintxtrecord_set.count(),
+            "A": self.domainarecord_set.count() + host_a_records
         }
-        return size
+        return ', '.join(['{}: {}'.format(k, v) for k, v in size.items()])
 
     num_records.short_description = "Num Records"
 
@@ -526,11 +526,11 @@ class Host(models.Model):
 
     def mac_addresses(self):
         addresses = self.interface_set.filter(macaddr__isnull=False).values_list('macaddr', flat=True)
-        return ",".join(addresses)
+        return ", ".join(addresses)
 
     def ip_addresses(self):
         addresses = self.interface_set.filter(ip4address__isnull=False).values_list('ip4address__address', flat=True)
-        return ",".join(addresses)
+        return ", ".join(addresses)
 
     def as_pxe_files(self):
         return host_as_pxe_files(self)

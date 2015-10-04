@@ -87,21 +87,40 @@ def update_domain_serial_when_change_to_host(sender, instance, created, **kwargs
 
 @receiver(post_save, sender=Host)
 def create_pxe_key_and_write_pxe_files_when_host_changes(sender, instance, created, **kwargs):
-    if not instance.pxe_key:
+    host = instance
+
+    if not host.pxe_key:
         # generate key (prevent infinite recursion by using update)
         pxe_key = uuid.uuid4().hex
-        Host.objects.filter(pk=instance.pk).update(pxe_key=pxe_key)
-        instance.pxe_key = pxe_key
+        Host.objects.filter(pk=host.pk).update(pxe_key=pxe_key)
+        host.pxe_key = pxe_key
 
-    for pxe_file_name, pxe_file in instance.as_pxe_files():
+    for pxe_file_name, pxe_file in host.as_pxe_files():
         path = os.path.join(settings.MDB_PXE_TFTP_ROOT, pxe_file_name)
-        if instance.pxe_installable:
+        if host.pxe_installable:
             with open(path, 'w+') as f:
                 f.write(pxe_file)
                 logger.info("Created or updated {}".format(path))
+
+            # Also set necessary fields for pxe installation
+            interfaces = host.interface_set.exclude(ip4address__isnull=True)
+
+            for _if in interfaces:
+                changed = False
+                if not _if.pxe_filename:
+                    _if.pxe_filename = 'pxelinux.0'  # don't overwrite
+                    changed = True
+                if not _if.dhcp_client:
+                    _if.dhcp_client = True
+                    changed = True
+
+                if changed:
+                    _if.save()
+
         else:
-            os.unlink(path)
-            logger.info("deleted {}".format(path))
+            if os.path.exists(path):
+                os.unlink(path)
+                logger.info("deleted {}".format(path))
 
 
 @receiver(pre_delete, sender=Interface)
