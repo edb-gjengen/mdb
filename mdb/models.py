@@ -415,7 +415,6 @@ class DhcpOption(models.Model):
         verbose_name = 'DHCP option'
 
 
-@python_2_unicode_compatible
 class DhcpCustomField(models.Model):
     value = models.CharField(max_length=255)
     ip4subnet = models.ForeignKey(Ip4Subnet)

@@ -1,8 +1,8 @@
+import io
 from django.contrib.auth.models import User
 from django.core.management import call_command
 from django.core.urlresolvers import reverse
-from django.test import TestCase, LiveServerTestCase
-from django.utils import six
+from django.test import TestCase
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
 
@@ -45,12 +45,12 @@ class RunManagementCommands(TestCase):
 
     def test_zone_sync(self):
         expected_zone_file = ''
-        with six.BytesIO() as f:
+        with io.BytesIO() as f:
             call_command('zone-sync', debug=True, stdout=f)
         # TODO check expected_zone_file
 
     def test_dhcp_sync(self):
         expected_dhcp_file = ''
-        with six.BytesIO() as f:
+        with io.BytesIO() as f:
             call_command('dhcp-sync', ('--debug',), stdout=f)
         # TODO check expected_dhcp_file
