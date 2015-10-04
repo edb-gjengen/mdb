@@ -222,17 +222,15 @@ class DhcpConfig(models.Model):
         # time to write host definitions
         for subnet in self.ip4subnet_set.all():
             for ip4address in subnet.ip4address_set.all():
-                if ip4address.interface_set.count() == 0:
+                if not hasattr(ip4address, 'interface') or not ip4address.interface.dhcp_client:
                     continue
-                interface = ip4address.interface_set.get()
-                if not interface.dhcp_client:
-                    continue
-                content += "\nhost %s {\n" % interface.host.hostname
-                content += "\thardware ethernet %s;\n" % interface.macaddr
+                _if = ip4address.interface
+                content += "\nhost %s {\n" % _if.host.hostname
+                content += "\thardware ethernet %s;\n" % _if.macaddr
                 content += "\tfixed-address %s.%s;\n" % \
-                    (interface.host.hostname, interface.domain.domain_name)
-                if len(interface.pxe_filename) > 0:
-                    content += "\tfilename \"%s\";\n" % interface.pxe_filename
+                    (_if.host.hostname, _if.domain.domain_name)
+                if len(_if.pxe_filename) > 0:
+                    content += "\tfilename \"%s\";\n" % _if.pxe_filename
                 content += "}\n"
 
         return content
@@ -388,26 +386,18 @@ class Ip4Subnet(models.Model):
         content += ";\n"
 
         for addr in self.ip4address_set.all():
-            if addr.interface_set.count() == 0 and generate_unassigned:
+            """ Get PTR records for each v4 address in subnet """
+            if hasattr(addr, 'interface') and addr.interface.domain:
+                hostname = "%s.%s" % (
+                    addr.interface.host.hostname,
+                    addr.interface.domain.domain_name)
+                content += "%-20s\tIN\tPTR\t%s.\n" % \
+                    (addr.address.split(".")[3], hostname)
+            elif not hasattr(addr, 'interface') and generate_unassigned:
                 content += "%s\tIN\tPTR\t%s.%s\n" % (
                     addr.address,
                     addr.address.split(".")[3],
                     "dhcp.neuf.no.")
-                continue
-
-            for interface in addr.interface_set.all():
-                if interface.domain is None and generate_unassigned:
-                    content += "%s\tIN\tPTR\t%s.%s.\n" % (
-                        addr.address,
-                        addr.address.split(".")[3],
-                        "dhcp.neuf.no")
-
-                else:
-                    hostname = "%s.%s" % (
-                        interface.host.hostname,
-                        interface.domain.domain_name)
-                    content += "%-20s\tIN\tPTR\t%s.\n" % \
-                        (addr.address.split(".")[3], hostname)
 
         return content
 

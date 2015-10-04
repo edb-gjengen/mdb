@@ -1,6 +1,8 @@
 from django.contrib.auth.models import User
+from django.core.management import call_command
 from django.core.urlresolvers import reverse
-from django.test import TestCase
+from django.test import TestCase, LiveServerTestCase
+from django.utils import six
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
 
@@ -36,3 +38,19 @@ class UnitTests(TestCase):
     def test_host_as_pxe_files(self):
         host = Host.objects.first()
         self.assertEqual(len(host.as_pxe_files()), 1)
+
+
+class RunManagementCommands(TestCase):
+    fixtures = ['test_data']
+
+    def test_zone_sync(self):
+        expected_zone_file = ''
+        with six.BytesIO() as f:
+            call_command('zone-sync', debug=True, stdout=f)
+        # TODO check expected_zone_file
+
+    def test_dhcp_sync(self):
+        expected_dhcp_file = ''
+        with six.BytesIO() as f:
+            call_command('dhcp-sync', ('--debug',), stdout=f)
+        # TODO check expected_dhcp_file
