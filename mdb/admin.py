@@ -115,7 +115,7 @@ class DomainARecordInline(admin.TabularInline):
 
 class DomainAdmin(admin.ModelAdmin):
     inlines = [DomainSrvRecordInline, DomainTxtRecordInline, DomainARecordInline, DomainCnameRecordInline]
-    list_display = ['domain_name', 'domain_soa', 'domain_admin', 'num_records', 'domain_ipaddr']
+    list_display = ['domain_name', 'domain_soa', 'domain_admin', 'num_records', 'domain_ipaddr',  'domain_ip6addr']
     search_fields = ['domain_name']
 
 

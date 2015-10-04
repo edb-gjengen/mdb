@@ -40,6 +40,7 @@ class Domain(models.Model):
     domain_minimum_ttl = models.IntegerField(default=86400)
     domain_admin = models.EmailField()
     domain_ipaddr = models.GenericIPAddressField(protocol='IPv4')
+    domain_ip6addr = models.GenericIPAddressField(protocol='IPv6', blank=True, null=True)
     domain_filename = models.CharField(max_length=256)
     created_date = models.DateTimeField(auto_now_add=True)
 
@@ -91,6 +92,9 @@ class Domain(models.Model):
 
         if self.domain_ipaddr is not None:
             content += "@\tIN\tA\t%s\n" % self.domain_ipaddr
+
+        if self.domain_ip6addr is not None:
+            content += "@\tIN\tAAAA\t%s\n" % self.domain_ip6addr
 
         content += "; SRV records\n"
 
