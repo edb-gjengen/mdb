@@ -50,6 +50,36 @@
 },
 {
     "fields": {
+        "domain": 1,
+        "created_date": "2015-10-04T17:13:46.810",
+        "name": "www",
+        "target": "edb.technology."
+    },
+    "model": "mdb.domaincnamerecord",
+    "pk": 1
+},
+{
+    "fields": {
+        "domain": 1,
+        "created_date": "2015-10-04T17:13:46.807",
+        "name": "test",
+        "target": "127.0.0.1"
+    },
+    "model": "mdb.domainarecord",
+    "pk": 1
+},
+{
+    "fields": {
+        "domain": 1,
+        "created_date": "2015-10-04T17:13:46.809",
+        "name": "test",
+        "target": "::1"
+    },
+    "model": "mdb.domainaaaarecord",
+    "pk": 1
+},
+{
+    "fields": {
         "ddns_update_style": "none",
         "name": "default",
         "authoritative": false,

@@ -106,6 +106,11 @@ class Domain(models.Model):
         for a in self.domainarecord_set.all():
             content += a.as_record() + "\n"
 
+        content += "; AAAA records\n"
+
+        for aaaa in self.domainaaaarecord_set.all():
+            content += aaaa.as_record() + "\n"
+
         content += "; CNAME records \n"
 
         for cname in self.domaincnamerecord_set.all():
@@ -191,12 +196,26 @@ class DomainCnameRecord(models.Model):
 @python_2_unicode_compatible
 class DomainARecord(models.Model):
     name = models.CharField(max_length=256)
-    target = models.CharField(max_length=256)
+    target = models.GenericIPAddressField(protocol='IPv4')
     domain = models.ForeignKey(Domain)
     created_date = models.DateTimeField(auto_now_add=True)
 
     def as_record(self):
         return '{} IN A {}'.format(self.name, self.target)
+
+    def __str__(self):
+        return self.as_record()
+
+
+@python_2_unicode_compatible
+class DomainAAAARecord(models.Model):
+    name = models.CharField(max_length=256)
+    target = models.GenericIPAddressField(protocol='IPv6')
+    domain = models.ForeignKey(Domain)
+    created_date = models.DateTimeField(auto_now_add=True)
+
+    def as_record(self):
+        return '{} IN AAAA {}'.format(self.name, self.target)
 
     def __str__(self):
         return self.as_record()

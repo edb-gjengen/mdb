@@ -52,5 +52,5 @@ class RunManagementCommands(TestCase):
     def test_dhcp_sync(self):
         expected_dhcp_file = ''
         with io.BytesIO() as f:
-            call_command('dhcp-sync', ('--debug',), stdout=f)
+            call_command('dhcp-sync', stdout=f)
         # TODO check expected_dhcp_file
