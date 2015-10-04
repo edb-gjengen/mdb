@@ -8,6 +8,12 @@ A Django app for managing computer equipment.
     python manage.py migrate
     python manage.py runserver
 
+## Development tasks
+Dump test data:
+
+    python manage.py dumpdata mdb --natural-foreign --indent=4 > mdb/fixtures/test_data.json
+
+
 ## Features
 
 * Creates DHCPD configuration files

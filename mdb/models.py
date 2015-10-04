@@ -353,10 +353,7 @@ class Ip4Subnet(models.Model):
 
     def last_address(self):
         subnet = ipaddress.IPv4Network(self.network + "/" + self.netmask)
-        for curr in subnet.hosts():
-            pass  # horribly inefficient
-
-        return curr
+        return list(subnet.hosts())[-1]
 
     broadcast_address.short_description = 'broadcast'
     num_addresses.short_description = '#addresses'
@@ -560,7 +557,7 @@ class Interface(models.Model):
 @python_2_unicode_compatible
 class Ip6Address(models.Model):
     subnet = models.ForeignKey(Ip6Subnet)
-    address = models.CharField(max_length=64)
+    address = models.GenericIPAddressField(protocol='IPv6')
     interface = models.ForeignKey(Interface)
 
     def full_address(self):
