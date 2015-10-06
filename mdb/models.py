@@ -1,5 +1,6 @@
 from django.db import models
 from django.db.models import Count
+from django.template.loader import render_to_string
 from django.utils.encoding import python_2_unicode_compatible
 from django.utils.translation import ugettext_lazy as _
 from mdb.utils import host_as_pxe_files
@@ -49,6 +50,9 @@ class Domain(models.Model):
 
     def __str__(self):
         return self.domain_name
+
+    def domain_admin_formatted(self):
+        return self.domain_admin.replace("@", ".")
 
     def num_records(self):
         host_a_records = Host.objects.filter(interface__domain=self).count()
@@ -135,6 +139,13 @@ class Domain(models.Model):
                     ipv6addr.full_address())
 
         return content
+
+    def zone_file_contents_alt(self):
+        context = {
+            'domain': self,
+            'now': datetime.datetime.now()
+        }
+        return render_to_string('zone_file.txt', context=context)
 
 
 @python_2_unicode_compatible

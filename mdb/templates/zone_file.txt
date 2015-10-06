@@ -1,0 +1,31 @@
+; serial: {{ domain.domain_serial }}
+; zone file for {{ domain.domain_name }}
+; {{ now|date:"c" }}
+; filename: {{ domain.domain_filename }}
+$TTL {{ domain.domain_ttl }}
+@ IN SOA {{ domain.domain_soa }}. {{ domain.domain_admin_formatted }}. (
+    {{ domain.domain_serial|stringformat:"-10s" }}  ; serial
+    {{ domain.domain_refresh|stringformat:"-10s" }}  ; refresh
+    {{ domain.domain_retry|stringformat:"-10s" }}  ; retry
+    {{ domain.domain_expire|stringformat:"-10s" }}  ; expire
+    {{ domain.domain_minimum_ttl }} )     ; minimum ttl
+;
+{% for nameserver in domain.domain_nameservers.all %}@    IN    NS      {{ nameserver.hostname }}.
+{% endfor %}{% for mx in domain.domain_mailexchanges.all %}@          MX      {{ mx.priority }} {{ mx.hostname }}.{% endfor %}
+{% if domain.domain_ipaddr %}@    IN    A       {{ domain.domain_ipaddr }}{% endif %}
+{% if domain.domain_ip6addr %}@    IN    AAAA    {{ domain.domain_ip6addr }}{% endif %}
+; SRV records
+{% for srv in domain.domainsrvrecord_set.all %}{{ srv.as_record }}{% endfor %}
+; A records
+{% for a in domain.domainarecord_set.all %}{{ a.as_record }}{% endfor %}
+; AAAA records
+{% for aaaa in domain.domainaaaarecord_set.all %}{{ aaaa.as_record }}{% endfor %}
+; CNAME records
+{% for cname in domain.domaincnamerecord_set.all %}{{ cname.name|stringformat:"-20s" }}    IN    CNAME    {{ cname.target }}{% endfor %}
+; TXT records
+{% for txt in domain.domaintxtrecord_set.all %}{{ txt.as_record }}{% endfor %}
+; HOST records
+{% for interface in domain.interface_set.all %}
+{% if interface.ip4address %}{{ interface.host.hostname|stringformat:"-20s" }}    IN    A       {{ interface.ip4address.address }}{% endif %}
+{% for ipv6addr in interface.ip6address_set.all %}{{ interface.host.hostname|stringformat:"-20s" }}    IN    AAAA    {{ ipv6addr.full_address }}{% endfor %}
+{% endfor %}
