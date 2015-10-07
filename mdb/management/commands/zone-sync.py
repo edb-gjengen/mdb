@@ -7,8 +7,12 @@ from difflib import context_diff
 from django.core.management.base import BaseCommand
 from django.core.mail import mail_admins
 from optparse import make_option
-from commands import getstatusoutput
-from mdb.models import *
+try:
+    from subprocess import getstatusoutput
+except ImportError:
+    from commands import getstatusoutput
+
+from mdb.models import Domain, Ip4Subnet, Ip6Subnet
 
 
 class Command(BaseCommand):
@@ -43,7 +47,7 @@ class Command(BaseCommand):
         # do the binaries exist?
         for f in (self.checkzone_bin, self.bind_bin):
             if not os.path.isfile(f):
-                print "ERROR: no such file %s, exiting..." % f
+                print("ERROR: no such file %s, exiting..." % f)
                 if not debug:
                     sys.exit(1)
 
@@ -106,11 +110,11 @@ class Command(BaseCommand):
             'diff': None,
         }
 
-        print "updating %s %s [%d -> %d]" % (
+        print("updating %s %s [%d -> %d]" % (
             zonetype,
             zone.domain_name,
             zone.domain_active_serial,
-            zone.domain_serial)
+            zone.domain_serial))
 
         # generate zone file contents
         new = zone.zone_file_contents()

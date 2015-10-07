@@ -1,5 +1,8 @@
-from mdb.models import *
-from django.contrib import admin
+from django.contrib import admin, messages
+
+from mdb.models import Ip6Address, Interface, Ip4Address, DhcpOption, DhcpCustomField, DomainSrvRecord, DomainTxtRecord, \
+    DomainCnameRecord, DomainARecord, Domain, Host, Ip4Subnet, Ip6Subnet, Nameserver, MailExchange, OperatingSystem, \
+    HostType, DhcpConfig
 
 
 class Ip6AddressInline(admin.TabularInline):
@@ -20,17 +23,17 @@ class HostAdmin(admin.ModelAdmin):
     ordering = ('hostname',)
     inlines = [InterfaceInline]
     list_display = ['hostname', 'owner', 'host_type', 'location', 'mac_addresses', 'ip_addresses', 'in_domain',
-                    'ipv6_enabled']
-    list_filter = ['host_type', 'owner', 'location']
+                    'pxe_installable', 'ipv6_enabled']
+    list_filter = ['host_type', 'owner', 'location', 'pxe_installable']
     readonly_fields = ['kerberos_principal_name', 'kerberos_principal_created_date',
                        'kerberos_principal_created']
     search_fields = ['hostname', 'location', 'interface__macaddr', 'interface__ip4address__address']
     fieldsets = (
         ('Owner Information', {
-            'fields': ('owner', 'location', 'description' )
+            'fields': ('owner', 'location', 'description')
         }),
         ('Hardware and Software Information', {
-            'fields': (('brand', 'model', 'serial_number'), ('hostname', 'host_type'), ('operating_system', 'virtual'))
+            'fields': (('hostname', 'host_type'), ('pxe_key', 'pxe_installable'), ('brand', 'model'), 'serial_number', ('operating_system', 'virtual'))
         }),
         # FIXME: Not in use
         # ('Domain and Kerberos Information', {
@@ -40,6 +43,26 @@ class HostAdmin(admin.ModelAdmin):
         #                ('kerberos_principal_name', 'kerberos_principal_created_date'))
         # }),
     )
+    actions = ['set_installable']
+
+    def _get_host_warning_message(self, host, ifs):
+        ifs_str = ', '.join([_if.name for _if in ifs])
+        return 'Host {} might not be installable since interface(s) {} has no IP set.'.format(host, ifs_str)
+
+    def set_installable(self, request, queryset):
+        invalid_ifs_per_host = []
+
+        for obj in queryset:
+            invalid_ifs = obj.interface_set.filter(ip4address__isnull=True)
+            if invalid_ifs.exists():
+                invalid_ifs_per_host.append(self._get_host_warning_message(obj, invalid_ifs))
+            obj.pxe_installable = True
+            obj.save()  # triggers post save signal
+
+        if invalid_ifs_per_host:
+            self.message_user(request, message='\n'.join(invalid_ifs_per_host), level=messages.WARNING)
+
+    set_installable.short_description = "Mark selected hosts as PXE installable"
 
     def get_queryset(self, request):
         return super(HostAdmin, self).get_queryset(request).select_related()
