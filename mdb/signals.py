@@ -101,6 +101,7 @@ def create_pxe_key_and_write_pxe_files_when_host_changes(sender, instance, creat
             with open(path, 'w+') as f:
                 f.write(pxe_file)
                 logger.info("Created or updated {}".format(path))
+            os.chmod(path, 0o644)  # Not writeable for all
 
             # Also set necessary fields for pxe installation
             interfaces = host.interface_set.exclude(ip4address__isnull=True)

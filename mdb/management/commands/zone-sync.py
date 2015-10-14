@@ -59,7 +59,7 @@ class Command(BaseCommand):
         for zone in chain(Domain.objects.all(),
                           Ip4Subnet.objects.all(),
                           Ip6Subnet.objects.all()):
-            if zone.domain_serial == zone.domain_active_serial or force:
+            if zone.domain_serial == zone.domain_active_serial and not force:
                 continue
             if self.update_zone(zone):
                 self.changes[zone.domain_name]['success'] = True
