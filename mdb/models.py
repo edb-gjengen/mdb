@@ -40,6 +40,7 @@ class Domain(models.Model):
     domain_minimum_ttl = models.IntegerField(default=86400)
     domain_admin = models.EmailField()
     domain_ipaddr = models.GenericIPAddressField(protocol='IPv4')
+    domain_ip6addr = models.GenericIPAddressField(protocol='IPv6', blank=True, null=True)
     domain_filename = models.CharField(max_length=256)
     created_date = models.DateTimeField(auto_now_add=True)
 
@@ -92,6 +93,9 @@ class Domain(models.Model):
         if self.domain_ipaddr is not None:
             content += "@\tIN\tA\t%s\n" % self.domain_ipaddr
 
+        if self.domain_ip6addr is not None:
+            content += "@\tIN\tAAAA\t%s\n" % self.domain_ip6addr
+
         content += "; SRV records\n"
 
         for srv in self.domainsrvrecord_set.all():
@@ -101,6 +105,11 @@ class Domain(models.Model):
 
         for a in self.domainarecord_set.all():
             content += a.as_record() + "\n"
+
+        content += "; AAAA records\n"
+
+        for aaaa in self.domainaaaarecord_set.all():
+            content += aaaa.as_record() + "\n"
 
         content += "; CNAME records \n"
 
@@ -187,12 +196,26 @@ class DomainCnameRecord(models.Model):
 @python_2_unicode_compatible
 class DomainARecord(models.Model):
     name = models.CharField(max_length=256)
-    target = models.CharField(max_length=256)
+    target = models.GenericIPAddressField(protocol='IPv4')
     domain = models.ForeignKey(Domain)
     created_date = models.DateTimeField(auto_now_add=True)
 
     def as_record(self):
         return '{} IN A {}'.format(self.name, self.target)
+
+    def __str__(self):
+        return self.as_record()
+
+
+@python_2_unicode_compatible
+class DomainAAAARecord(models.Model):
+    name = models.CharField(max_length=256)
+    target = models.GenericIPAddressField(protocol='IPv6')
+    domain = models.ForeignKey(Domain)
+    created_date = models.DateTimeField(auto_now_add=True)
+
+    def as_record(self):
+        return '{} IN AAAA {}'.format(self.name, self.target)
 
     def __str__(self):
         return self.as_record()

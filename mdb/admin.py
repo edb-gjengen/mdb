@@ -2,7 +2,7 @@ from django.contrib import admin, messages
 
 from mdb.models import Ip6Address, Interface, Ip4Address, DhcpOption, DhcpCustomField, DomainSrvRecord, DomainTxtRecord, \
     DomainCnameRecord, DomainARecord, Domain, Host, Ip4Subnet, Ip6Subnet, Nameserver, MailExchange, OperatingSystem, \
-    HostType, DhcpConfig
+    HostType, DhcpConfig, DomainAAAARecord
 
 
 class Ip6AddressInline(admin.TabularInline):
@@ -113,9 +113,15 @@ class DomainARecordInline(admin.TabularInline):
     extra = 0
 
 
+class DomainAAAARecordInline(admin.TabularInline):
+    model = DomainAAAARecord
+    extra = 0
+
+
 class DomainAdmin(admin.ModelAdmin):
-    inlines = [DomainSrvRecordInline, DomainTxtRecordInline, DomainARecordInline, DomainCnameRecordInline]
-    list_display = ['domain_name', 'domain_soa', 'domain_admin', 'num_records', 'domain_ipaddr']
+    inlines = [DomainSrvRecordInline, DomainTxtRecordInline, DomainARecordInline, DomainAAAARecordInline,
+               DomainCnameRecordInline]
+    list_display = ['domain_name', 'domain_soa', 'domain_admin', 'num_records', 'domain_ipaddr',  'domain_ip6addr']
     search_fields = ['domain_name']
 
 
