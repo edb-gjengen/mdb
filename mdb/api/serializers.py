@@ -1,6 +1,8 @@
-from mdb.models import Host
+from __future__ import unicode_literals
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+
+from mdb.models import Host
 
 
 class HostPXEValidateSerializer(serializers.Serializer):
@@ -41,6 +43,7 @@ class HostPXEValidateSerializer(serializers.Serializer):
     def create(self, validated_data):
         # Make requests kind of idempotent by only allowing 1 request / installation
         self.host.pxe_installable = False
+        self.host.pxe_key = ''
         self.host.save()
 
         return self.host

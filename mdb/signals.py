@@ -98,6 +98,7 @@ def create_pxe_key_and_write_pxe_files_when_host_changes(sender, instance, creat
     for pxe_file_name, pxe_file in host.as_pxe_files():
         path = os.path.join(settings.MDB_PXE_TFTP_ROOT, pxe_file_name)
         if host.pxe_installable:
+            # Write pxeconfig file to disk
             with open(path, 'w+') as f:
                 f.write(pxe_file)
                 logger.info("Created or updated {}".format(path))
@@ -120,6 +121,7 @@ def create_pxe_key_and_write_pxe_files_when_host_changes(sender, instance, creat
 
         else:
             if os.path.exists(path):
+                # Delete pxeconfig file from disk
                 os.unlink(path)
                 logger.info("deleted {}".format(path))
 
