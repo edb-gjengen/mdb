@@ -46,7 +46,7 @@ class Command(BaseCommand):
 
         # do the binaries exist?
         for f in (self.checkzone_bin, self.bind_bin):
-            if not os.path.isfile(f):
+            if not os.path.isfile(f) and not debug:
                 print("ERROR: no such file %s, exiting..." % f)
                 if not debug:
                     sys.exit(1)

@@ -93,7 +93,7 @@ class Domain(models.Model):
         if self.domain_ipaddr is not None:
             content += "@\tIN\tA\t%s\n" % self.domain_ipaddr
 
-        if self.domain_ip6addr is not None:
+        if self.domain_ip6addr:
             content += "@\tIN\tAAAA\t%s\n" % self.domain_ip6addr
 
         content += "; SRV records\n"
