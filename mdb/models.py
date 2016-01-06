@@ -476,6 +476,7 @@ class Ip4Address(models.Model):
         if not hasattr(self, 'interface'):
             return self.address
 
+        # FIXME: Remove this when admin is overridden
         return "{} ({})".format(self.address, self.interface.host.hostname)
 
     def assigned_to_host(self):

@@ -1,5 +1,5 @@
 from django.contrib import admin, messages
-
+from mdb.forms import InterfaceForm
 from mdb.models import Ip6Address, Interface, Ip4Address, DhcpOption, DhcpCustomField, DomainSrvRecord, DomainTxtRecord, \
     DomainCnameRecord, DomainARecord, Domain, Host, Ip4Subnet, Ip6Subnet, Nameserver, MailExchange, OperatingSystem, \
     HostType, DhcpConfig, DomainAAAARecord
@@ -14,6 +14,7 @@ class InterfaceInline(admin.TabularInline):
     inlines = [Ip6AddressInline]
     model = Interface
     extra = 0
+    form = InterfaceForm
 
     def get_queryset(self, request):
         return super(InterfaceInline, self).get_queryset(request).select_related()
