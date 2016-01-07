@@ -472,12 +472,7 @@ class Ip4Address(models.Model):
     ping_avg_rtt = models.FloatField(null=True, blank=True)
 
     def __str__(self):
-        # FIXME: generates 2 SQL queries?
-        if not hasattr(self, 'interface'):
-            return self.address
-
-        # FIXME: Remove this when admin is overridden
-        return "{} ({})".format(self.address, self.interface.host.hostname)
+        return self.address
 
     def assigned_to_host(self):
         return self.interface.host

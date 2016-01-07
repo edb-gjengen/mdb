@@ -4,13 +4,12 @@ from django.forms import ModelChoiceField
 from mdb.models import Interface, Ip4Address
 
 
-class Ipv4ModelChoiceField(ModelChoiceField):
-    # def __init__(self, *args, **kwargs):
-    #     super(Ipv4ModelChoiceField, self).__init__(*args, **kwargs)
-
+class Ip4ModelChoiceField(ModelChoiceField):
     def label_from_instance(self, obj):
-        # TODO improve those labelZ
-        return obj.__str__()
+        if not hasattr(obj, 'interface'):
+            return obj.address
+
+        return "{} ({})".format(obj.address, obj.interface.host.hostname)
 
 
 class InterfaceForm(forms.ModelForm):
@@ -19,4 +18,7 @@ class InterfaceForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super(InterfaceForm, self).__init__(*args, **kwargs)
 
-        self.fields['ip4address'] = Ipv4ModelChoiceField(queryset=Ip4Address.objects.select_related())
+        # Join Ip4Address with tables interface and host,
+        # before printing the select labels that walk those two relations.
+        queryset = Ip4Address.objects.select_related('interface', 'interface__host')
+        self.fields['ip4address'] = Ip4ModelChoiceField(queryset=queryset)
