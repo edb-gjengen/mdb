@@ -1,7 +1,7 @@
 from django.db import models
 from django.utils.encoding import python_2_unicode_compatible
 from django.utils.translation import ugettext_lazy as _
-from mdb.utils import host_as_pxe_files
+from mdb.pxe import host_as_pxe_files
 
 from mdb.validators import validate_hostname, validate_macaddr
 
