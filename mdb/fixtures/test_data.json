@@ -2740,6 +2740,18 @@
 },
 {
     "fields": {
+        "pxe_initrd": "path-to-initrd-for-os",
+        "pxe_kernel": "path-to-kernel-for-os",
+        "pxe_preseed_config_url": "http://url-to-preseed.config",
+        "arch": "x86_64",
+        "name": "Ubuntu",
+        "version": "16.04-beta-final"
+    },
+    "model": "mdb.operatingsystem",
+    "pk": 2
+},
+{
+    "fields": {
         "kerberos_principal_name": "",
         "operating_system": 1,
         "description": "testclient",

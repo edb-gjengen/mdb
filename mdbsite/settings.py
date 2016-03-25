@@ -124,6 +124,8 @@ REST_FRAMEWORK = {
 }
 
 MDB_PXE_TFTP_ROOT = '/var/lib/tftpboot/pxelinux/pxelinux.cfg/'
+MDB_PXE_KERNEL = 'ubuntu/14_04/amd64/alternate/linux'
+MDB_PXE_INITRD = 'ubuntu/14_04/amd64/alternate/initrd.gz'
 MDB_PXE_PRESEED_URL = 'http://158.36.190.194/ubuntu/preseed_1404.cfg'
 
 try:

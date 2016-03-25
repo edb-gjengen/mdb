@@ -477,6 +477,10 @@ class OperatingSystem(models.Model):
     version = models.CharField(max_length=64)
     arch = models.CharField(max_length=255, choices=OS_ARCHITECTURES, blank=True, null=True)
 
+    pxe_kernel = models.CharField(max_length=255, blank=True, null=True)
+    pxe_initrd = models.CharField(max_length=255, blank=True, null=True)
+    pxe_preseed_config_url = models.URLField(blank=True, null=True)
+
     def __str__(self):
         return self.name + " " + self.version + " (" + self.arch + ")"
 

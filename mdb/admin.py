@@ -192,7 +192,7 @@ class HostTypeAdmin(admin.ModelAdmin):
 
 
 class OperatingSystemAdmin(admin.ModelAdmin):
-    list_display = ['name', 'version', 'arch']
+    list_display = ['name', 'version', 'arch', 'pxe_kernel', 'pxe_initrd', 'pxe_preseed_config_url']
 
 
 admin.site.register(Domain, DomainAdmin)

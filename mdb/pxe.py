@@ -4,11 +4,21 @@ import ipaddress
 
 
 def render_pxelinux_cfg(_if, host):
-    # TODO add fields to os model and make dynamic per host
-    distro = 'ubuntu/14_04/amd64/alternate/'
-    kernel = distro + 'linux'
-    initrd = distro + 'initrd.gz'
+    """Renders pxelinux.cfg based on a host and the set of host interfaces.
+    If the host is tied to an OS with PXE fields set, it will use these instead of defaults."""
+    # Default config
+    kernel = settings.MDB_PXE_KERNEL
+    initrd = settings.MDB_PXE_INITRD
     preseed_config_url = settings.MDB_PXE_PRESEED_URL
+
+    # Per host config (via OS model)
+    _os = host.operating_system
+    pxe_attrs = [_os.pxe_initrd, _os.pxe_kernel, _os.pxe_preseed_config_url]
+    if None not in pxe_attrs and '' not in pxe_attrs:
+        kernel = _os.pxe_kernel
+        initrd = _os.pxe_initrd
+        preseed_config_url = _os.pxe_preseed_config_url
+
     context = {
         'kernel': kernel,
         'initrd': initrd,
@@ -16,6 +26,7 @@ def render_pxelinux_cfg(_if, host):
         'host': host,
         'interface': _if
     }
+
     return render_to_string('pxelinux.cfg', context=context)
 
 
@@ -34,7 +45,7 @@ def get_pxe_filename(interface, filename_format='mac_addr'):
 
 
 def host_as_pxe_files(host):
-    """ Returns a list of filename,content for each host interface with an IPv4 address """
+    """Returns a list of filename,content for each host interface with an IPv4 address."""
     from mdb.models import Host
     assert isinstance(host, Host)
 
