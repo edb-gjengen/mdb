@@ -1,4 +1,7 @@
+import ipaddress
+
 from django.contrib import admin, messages
+from django.db.models import Count
 from mdb.forms import InterfaceForm
 from mdb.models import Ip6Address, Interface, Ip4Address, DhcpOption, DhcpCustomField, DomainSrvRecord, DomainTxtRecord, \
     DomainCnameRecord, DomainARecord, Domain, Host, Ip4Subnet, Ip6Subnet, Nameserver, MailExchange, OperatingSystem, \
@@ -46,6 +49,26 @@ class HostAdmin(admin.ModelAdmin):
     )
     actions = ['set_installable']
 
+    def mac_addresses(self, host):
+        addresses = host.interface_set.filter(macaddr__isnull=False).values_list('macaddr', flat=True)
+        return ", ".join(addresses)
+
+    def ip_addresses(self, host):
+        addresses = host.interface_set.filter(ip4address__isnull=False).values_list('ip4address__address', flat=True)
+        return ", ".join(addresses)
+
+    def in_domain(self, host):
+        domains = host.interface_set.values_list('domain__domain_name', flat=True)
+        return ",".join(domains)
+
+    in_domain.short_description = "in domains"
+
+    def ipv6_enabled(self, host):
+        ipv6_ifs = host.interface_set.annotate(num_ipv6=Count('ip6address')).filter(num_ipv6__gt=0)
+        return ipv6_ifs.exists()
+
+    ipv6_enabled.boolean = True
+
     def _get_host_warning_message(self, host, ifs):
         ifs_str = ', '.join([_if.name for _if in ifs])
         return 'Host {} might not be installable since interface(s) {} has no IP set.'.format(host, ifs_str)
@@ -74,6 +97,11 @@ class Ip4AddressInline(admin.TabularInline):
     extra = 0
     readonly_fields = ['address', 'assigned_to_host']
 
+    def assigned_to_host(self, addr):
+        return addr.interface.host
+
+    assigned_to_host.short_description = "Assigned to Host"
+
 
 class DhcpOptionInline(admin.TabularInline):
     model = DhcpOption
@@ -88,6 +116,27 @@ class DhcpCustomFieldInline(admin.TabularInline):
 class SubnetAdmin(admin.ModelAdmin):
     list_display = ['name', 'network', 'netmask', 'num_addresses', 'broadcast_address', 'first_address', 'last_address']
     inlines = [DhcpOptionInline, DhcpCustomFieldInline, Ip4AddressInline]
+
+    def num_addresses(self, ip4subnet):
+        subnet = ipaddress.IPv4Network(ip4subnet.network + "/" + ip4subnet.netmask)
+        return subnet.num_addresses
+
+    def broadcast_address(self, ip4subnet):
+        subnet = ipaddress.IPv4Network(ip4subnet.network + "/" + ip4subnet.netmask)
+        return subnet.broadcast_address
+
+    def first_address(self, ip4subnet):
+        subnet = ipaddress.IPv4Network(ip4subnet.network + "/" + ip4subnet.netmask)
+        return next(subnet.hosts())
+
+    def last_address(self, ip4subnet):
+        subnet = ipaddress.IPv4Network(ip4subnet.network + "/" + ip4subnet.netmask)
+        return list(subnet.hosts())[-1]
+
+    broadcast_address.short_description = 'broadcast'
+    num_addresses.short_description = '#addresses'
+    first_address.short_description = 'first address'
+    last_address.short_description = 'last address'
 
     def get_queryset(self, request):
         # TODO: optimize
@@ -124,6 +173,18 @@ class DomainAdmin(admin.ModelAdmin):
                DomainCnameRecordInline]
     list_display = ['domain_name', 'domain_soa', 'domain_admin', 'num_records', 'domain_ipaddr',  'domain_ip6addr']
     search_fields = ['domain_name']
+
+    def num_records(self, domain):
+        host_a_records = Host.objects.filter(interface__domain=domain).count()
+        size = {
+            "CNAME": domain.domaincnamerecord_set.count(),
+            "SRV": domain.domainsrvrecord_set.count(),
+            "TXT": domain.domaintxtrecord_set.count(),
+            "A": domain.domainarecord_set.count() + host_a_records
+        }
+        return ', '.join(['{}: {}'.format(k, v) for k, v in size.items()])
+
+    num_records.short_description = "Num Records"
 
 
 class HostTypeAdmin(admin.ModelAdmin):

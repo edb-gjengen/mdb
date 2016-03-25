@@ -1,5 +1,4 @@
 from django.db import models
-from django.db.models import Count
 from django.utils.encoding import python_2_unicode_compatible
 from django.utils.translation import ugettext_lazy as _
 from mdb.utils import host_as_pxe_files
@@ -49,18 +48,6 @@ class Domain(models.Model):
 
     def __str__(self):
         return self.domain_name
-
-    def num_records(self):
-        host_a_records = Host.objects.filter(interface__domain=self).count()
-        size = {
-            "CNAME": self.domaincnamerecord_set.count(),
-            "SRV": self.domainsrvrecord_set.count(),
-            "TXT": self.domaintxtrecord_set.count(),
-            "A": self.domainarecord_set.count() + host_a_records
-        }
-        return ', '.join(['{}: {}'.format(k, v) for k, v in size.items()])
-
-    num_records.short_description = "Num Records"
 
     def __eq__(self, other):
         if not other or not hasattr(other, 'domain_name'):
@@ -380,27 +367,6 @@ class Ip4Subnet(models.Model):
     def __str__(self):
         return self.network + " (" + self.name + ")"
 
-    def num_addresses(self):
-        subnet = ipaddress.IPv4Network(self.network + "/" + self.netmask)
-        return subnet.num_addresses
-
-    def broadcast_address(self):
-        subnet = ipaddress.IPv4Network(self.network + "/" + self.netmask)
-        return subnet.broadcast_address
-
-    def first_address(self):
-        subnet = ipaddress.IPv4Network(self.network + "/" + self.netmask)
-        return next(subnet.hosts())
-
-    def last_address(self):
-        subnet = ipaddress.IPv4Network(self.network + "/" + self.netmask)
-        return list(subnet.hosts())[-1]
-
-    broadcast_address.short_description = 'broadcast'
-    num_addresses.short_description = '#addresses'
-    first_address.short_description = 'first address'
-    last_address.short_description = 'last address'
-
     def zone_file_contents(self, generate_unassigned=False):
         content = ""
         content += "; zone file for %s\n" % self.domain_name
@@ -474,11 +440,6 @@ class Ip4Address(models.Model):
     def __str__(self):
         return self.address
 
-    def assigned_to_host(self):
-        return self.interface.host
-
-    assigned_to_host.short_description = "Assigned to Host"
-
     class Meta:
         verbose_name = 'IPv4 address'
         verbose_name_plural = 'IPv4 addresses'
@@ -547,26 +508,6 @@ class Host(models.Model):
 
     def __str__(self):
         return self.hostname
-
-    def in_domain(self):
-        domains = self.interface_set.values_list('domain__domain_name', flat=True)
-        return ",".join(domains)
-
-    in_domain.short_description = "in domains"
-
-    def ipv6_enabled(self):
-        ipv6_ifs = self.interface_set.annotate(num_ipv6=Count('ip6address')).filter(num_ipv6__gt=0)
-        return ipv6_ifs.exists()
-
-    ipv6_enabled.boolean = True
-
-    def mac_addresses(self):
-        addresses = self.interface_set.filter(macaddr__isnull=False).values_list('macaddr', flat=True)
-        return ", ".join(addresses)
-
-    def ip_addresses(self):
-        addresses = self.interface_set.filter(ip4address__isnull=False).values_list('ip4address__address', flat=True)
-        return ", ".join(addresses)
 
     def as_pxe_files(self):
         return host_as_pxe_files(self)
