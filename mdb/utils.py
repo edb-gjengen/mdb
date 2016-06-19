@@ -17,7 +17,7 @@ def format_domain_serial_and_add_one(serial):
         """ The serial contains todays date, just update it. """
         try:
             number = int(res[0])
-        except:
+        except ValueError:
             number = 1
         if number >= 99:
             """ This is bad... Just keep the number on 99.

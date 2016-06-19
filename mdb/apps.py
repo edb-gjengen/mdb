@@ -7,4 +7,4 @@ class MdbAppConfig(AppConfig):
 
     def ready(self):
         # all models are loaded, now attach signals
-        import mdb.signals
+        import mdb.signals  # noqa

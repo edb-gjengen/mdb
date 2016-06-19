@@ -68,13 +68,13 @@ class RunManagementCommands(TestCase):
     fixtures = ['test_data']
 
     def test_zone_sync(self):
-        expected_zone_file = ''
+        # expected_zone_file = ''
         with io.BytesIO() as f:
             call_command('zone-sync', debug=True, stdout=f)
         # TODO check expected_zone_file
 
     def test_dhcp_sync(self):
-        expected_dhcp_file = ''
+        # expected_dhcp_file = ''
         with io.BytesIO() as f:
             call_command('dhcp-sync', stdout=f)
         # TODO check expected_dhcp_file

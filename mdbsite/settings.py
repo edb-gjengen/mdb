@@ -116,7 +116,7 @@ SUIT_CONFIG = {
     ),
 
     # misc
-    'LIST_PER_PAGE': 30
+    'LIST_PER_PAGE': 35
 }
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': ('rest_framework.permissions.IsAuthenticated',),

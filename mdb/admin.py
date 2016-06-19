@@ -3,9 +3,10 @@ import ipaddress
 from django.contrib import admin, messages
 from django.db.models import Count
 from mdb.forms import InterfaceForm
-from mdb.models import Ip6Address, Interface, Ip4Address, DhcpOption, DhcpCustomField, DomainSrvRecord, DomainTxtRecord, \
-    DomainCnameRecord, DomainARecord, Domain, Host, Ip4Subnet, Ip6Subnet, Nameserver, MailExchange, OperatingSystem, \
-    HostType, DhcpConfig, DomainAAAARecord
+from mdb.models import (
+    Ip6Address, Interface, Ip4Address, DhcpOption, DhcpCustomField, DomainSrvRecord, DomainTxtRecord,
+    DomainCnameRecord, DomainARecord, Domain, Host, Ip4Subnet, Ip6Subnet, Nameserver, MailExchange, OperatingSystem,
+    HostType, DhcpConfig, DomainAAAARecord)
 
 
 class Ip6AddressInline(admin.TabularInline):
@@ -37,22 +38,22 @@ class HostAdmin(admin.ModelAdmin):
             'fields': ('owner', 'location', 'description')
         }),
         ('Hardware and Software Information', {
-            'fields': (('hostname', 'host_type'), ('pxe_key', 'pxe_installable'), ('brand', 'model'), 'serial_number', ('operating_system', 'virtual'))
+            'fields': (
+                ('hostname', 'host_type'),
+                ('pxe_key', 'pxe_installable'),
+                ('brand', 'model'),
+                'serial_number',
+                ('operating_system', 'virtual'))
         }),
-        # FIXME: Not in use
-        # ('Domain and Kerberos Information', {
-        #     'description': 'If this host is a member of the LDAP domain, you need to tick the request kerberos principal checkbox. A principal will then be created for the host.',
-        #     'classes': ['collapse'],
-        #     'fields': ('request_kerberos_principal', 'kerberos_principal_created',
-        #                ('kerberos_principal_name', 'kerberos_principal_created_date'))
-        # }),
     )
     actions = ['set_installable']
 
+    @staticmethod
     def mac_addresses(self, host):
         addresses = host.interface_set.filter(macaddr__isnull=False).values_list('macaddr', flat=True)
         return ", ".join(addresses)
 
+    @staticmethod
     def ip_addresses(self, host):
         addresses = host.interface_set.filter(ip4address__isnull=False).values_list('ip4address__address', flat=True)
         return ", ".join(addresses)
@@ -69,7 +70,8 @@ class HostAdmin(admin.ModelAdmin):
 
     ipv6_enabled.boolean = True
 
-    def _get_host_warning_message(self, host, ifs):
+    @staticmethod
+    def _get_host_warning_message(host, ifs):
         ifs_str = ', '.join([_if.name for _if in ifs])
         return 'Host {} might not be installable since interface(s) {} has no IP set.'.format(host, ifs_str)
 

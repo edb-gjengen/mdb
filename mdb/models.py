@@ -319,7 +319,7 @@ class Ip6Subnet(models.Model):
         # content += "$ORIGIN " + ".".join(network.exploded.replace(":","")[:16])[::-1] + ".ip6.arpa.\n"
 
         for addr in self.ip6address_set.all():
-            #if addr.interface_set.count() == 0: continue
+            # if addr.interface_set.count() == 0: continue
 
             if addr.interface.domain is None:
                 continue
