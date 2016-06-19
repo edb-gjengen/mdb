@@ -4,28 +4,31 @@ import ipaddress
 
 
 def render_pxelinux_cfg(_if, host):
-    """Renders pxelinux.cfg based on a host and the set of host interfaces.
+    """Renders pxelinux.cfg based on a host and the set of host interfaces,
     If the host is tied to an OS with PXE fields set, it will use these instead of defaults."""
+
     # Default config
-    kernel = settings.MDB_PXE_KERNEL
-    initrd = settings.MDB_PXE_INITRD
-    preseed_config_url = settings.MDB_PXE_PRESEED_URL
-
-    # Per host config (via OS model)
-    _os = host.operating_system
-    pxe_attrs = [_os.pxe_initrd, _os.pxe_kernel, _os.pxe_preseed_config_url]
-    if None not in pxe_attrs and '' not in pxe_attrs:
-        kernel = _os.pxe_kernel
-        initrd = _os.pxe_initrd
-        preseed_config_url = _os.pxe_preseed_config_url
-
     context = {
-        'kernel': kernel,
-        'initrd': initrd,
-        'preseed_config_url': preseed_config_url,
+        'kernel': settings.MDB_PXE_KERNEL,
+        'initrd': settings.MDB_PXE_INITRD,
+        'preseed_config_url': settings.MDB_PXE_PRESEED_URL,
         'host': host,
         'interface': _if
     }
+
+    # Per host config (via OS model)
+    _os = host.operating_system
+    required_pxe_attrs = [_os.pxe_initrd, _os.pxe_kernel]
+    if None not in required_pxe_attrs and '' not in required_pxe_attrs:
+        context['kernel'] = _os.pxe_kernel
+        context['initrd'] = _os.pxe_initrd
+
+        # optional preseed URL
+        if _os.pxe_preseed_config_url not in ['', None]:
+            context['preseed_config_url'] = _os.pxe_preseed_config_url
+        else:
+            # Per OS config without preseed
+            del context['preseed_config_url']
 
     return render_to_string('pxelinux.cfg', context=context)
 
