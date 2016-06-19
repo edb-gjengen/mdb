@@ -49,22 +49,24 @@ class HostAdmin(admin.ModelAdmin):
     actions = ['set_installable']
 
     @staticmethod
-    def mac_addresses(self, host):
+    def mac_addresses(host):
         addresses = host.interface_set.filter(macaddr__isnull=False).values_list('macaddr', flat=True)
         return ", ".join(addresses)
 
     @staticmethod
-    def ip_addresses(self, host):
+    def ip_addresses(host):
         addresses = host.interface_set.filter(ip4address__isnull=False).values_list('ip4address__address', flat=True)
         return ", ".join(addresses)
 
-    def in_domain(self, host):
+    @staticmethod
+    def in_domain(host):
         domains = host.interface_set.values_list('domain__domain_name', flat=True)
         return ",".join(domains)
 
     in_domain.short_description = "in domains"
 
-    def ipv6_enabled(self, host):
+    @staticmethod
+    def ipv6_enabled(host):
         ipv6_ifs = host.interface_set.annotate(num_ipv6=Count('ip6address')).filter(num_ipv6__gt=0)
         return ipv6_ifs.exists()
 
@@ -119,19 +121,23 @@ class SubnetAdmin(admin.ModelAdmin):
     list_display = ['name', 'network', 'netmask', 'num_addresses', 'broadcast_address', 'first_address', 'last_address']
     inlines = [DhcpOptionInline, DhcpCustomFieldInline, Ip4AddressInline]
 
-    def num_addresses(self, ip4subnet):
+    @staticmethod
+    def num_addresses(ip4subnet):
         subnet = ipaddress.IPv4Network(ip4subnet.network + "/" + ip4subnet.netmask)
         return subnet.num_addresses
 
-    def broadcast_address(self, ip4subnet):
+    @staticmethod
+    def broadcast_address(ip4subnet):
         subnet = ipaddress.IPv4Network(ip4subnet.network + "/" + ip4subnet.netmask)
         return subnet.broadcast_address
 
-    def first_address(self, ip4subnet):
+    @staticmethod
+    def first_address(ip4subnet):
         subnet = ipaddress.IPv4Network(ip4subnet.network + "/" + ip4subnet.netmask)
         return next(subnet.hosts())
 
-    def last_address(self, ip4subnet):
+    @staticmethod
+    def last_address(ip4subnet):
         subnet = ipaddress.IPv4Network(ip4subnet.network + "/" + ip4subnet.netmask)
         return list(subnet.hosts())[-1]
 
