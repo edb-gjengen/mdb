@@ -71,8 +71,8 @@ class Command(BaseCommand):
         diff = "\n".join(context_diff(
             a=old.splitlines(),
             b=new.splitlines(),
-            fromfile=config.active_serial,
-            tofile=config.serial,
+            fromfile=str(config.active_serial),
+            tofile=str(config.serial),
             lineterm=''))
 
         print(diff)
