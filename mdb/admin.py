@@ -48,29 +48,26 @@ class HostAdmin(admin.ModelAdmin):
     )
     actions = ['set_installable']
 
-    @staticmethod
-    def mac_addresses(host):
+    def mac_addresses(self, host):
         addresses = host.interface_set.filter(macaddr__isnull=False).values_list('macaddr', flat=True)
         return ", ".join(addresses)
 
-    @staticmethod
-    def ip_addresses(host):
+    def ip_addresses(self, host):
         addresses = host.interface_set.filter(ip4address__isnull=False).values_list('ip4address__address', flat=True)
         return ", ".join(addresses)
 
-    @staticmethod
-    def in_domain(host):
+    def in_domain(self, host):
         domains = host.interface_set.values_list('domain__domain_name', flat=True)
         return ",".join(domains)
 
     in_domain.short_description = "in domains"
 
-    @staticmethod
-    def ipv6_enabled(host):
+    def ipv6_enabled(self, host):
         ipv6_ifs = host.interface_set.annotate(num_ipv6=Count('ip6address')).filter(num_ipv6__gt=0)
         return ipv6_ifs.exists()
 
     ipv6_enabled.boolean = True
+    ipv6_enabled.admin_order_field = 'ipv6_enabled'
 
     @staticmethod
     def _get_host_warning_message(host, ifs):
