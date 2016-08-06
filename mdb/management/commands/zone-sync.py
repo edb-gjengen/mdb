@@ -32,8 +32,11 @@ class Command(BaseCommand):
                     help='Write zone files even if serial is unchanged.'),
     )
 
-    bind_bin = "/etc/init.d/bind9"
-    reload_command = "%s reload" % bind_bin
+    rndc_bin = "/usr/sbin/rndc"
+    reload_command = "%s reload" % rndc_bin
+    freeze_command = "%s freeze" % rndc_bin
+    thaw_command = "%s thaw" % rndc_bin
+    commands_in_order = [freeze_command, reload_command, thaw_command]
     checkzone_bin = "/usr/sbin/named-checkzone"
     checkzone_dir = "/tmp/mdb-checkzone"
     debug = False
@@ -45,7 +48,7 @@ class Command(BaseCommand):
         force = options['force']
 
         # do the binaries exist?
-        for f in (self.checkzone_bin, self.bind_bin):
+        for f in (self.checkzone_bin, self.rndc_bin):
             if not os.path.isfile(f) and not debug:
                 print("ERROR: no such file %s, exiting..." % f)
                 if not debug:
@@ -73,30 +76,31 @@ class Command(BaseCommand):
 
         # reload and send email with changes
         if self.changes and not debug:
-            sys.stdout.write("reloading bind... ")
-            status, output = getstatusoutput(self.reload_command)
-            if status != 0:
-                sys.stdout.write("fail\n")
-                message = (
-                    "Failed to reload bind, please inspect...\n\n" +
-                    "%s@%s# %s" % (
-                        os.getlogin(), os.uname()[1], self.reload_command) +
-                    "\n%s\n\n\n%s\n\n\n%s" % (output, errors, diffs))
-                mail_admins(
-                    subject="FAIL: bind (%s changed: %s)" % (len(self.changes), zones),
-                    message=message,
-                    html_message='<pre>%s</pre>' % message)
-                sys.exit(1)
-            else:
-                sys.stdout.write("ok\n")
-                message = (
-                    "Successfully updated bind zone files\n\n" +
-                    "%s\n\n%s" % (errors, diffs))
-                mail_admins(
-                    subject="Success: bind (%s changed: %s)" % (len(self.changes), zones),
-                    message=message,
-                    html_message='<pre>%s</pre>' % message)
-                sys.exit(0)
+            sys.stdout.write("reloading zones... ")
+            for command in self.commands_in_order:
+                status, output = getstatusoutput(command)
+                if status != 0:
+                    sys.stdout.write("fail\n")
+                    message = (
+                        "Failed to reload zones, please inspect...\n\n" +
+                        "%s@%s$ %s" % (
+                            os.getlogin(), os.uname()[1], command) +
+                        "\n%s\n\n\n%s\n\n\n%s" % (output, errors, diffs))
+                    mail_admins(
+                        subject="FAIL: bind (%s changed: %s)" % (len(self.changes), zones),
+                        message=message,
+                        html_message='<pre>%s</pre>' % message)
+                    sys.exit(1)
+
+            sys.stdout.write("ok\n")
+            message = (
+                "Successfully updated bind zone files\n\n" +
+                "%s\n\n%s" % (errors, diffs))
+            mail_admins(
+                subject="Success: bind (%s changed: %s)" % (len(self.changes), zones),
+                message=message,
+                html_message='<pre>%s</pre>' % message)
+            sys.exit(0)
 
     def update_zone(self, zone):
         zonetype = getattr(zone._meta, 'verbose_name', None) \
