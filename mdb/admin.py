@@ -67,7 +67,7 @@ class HostAdmin(admin.ModelAdmin):
         return ipv6_ifs.exists()
 
     ipv6_enabled.boolean = True
-    ipv6_enabled.admin_order_field = 'ipv6_enabled'
+    # FIXME: custom filter to sort custom field
 
     @staticmethod
     def _get_host_warning_message(host, ifs):
@@ -118,23 +118,19 @@ class SubnetAdmin(admin.ModelAdmin):
     list_display = ['name', 'network', 'netmask', 'num_addresses', 'broadcast_address', 'first_address', 'last_address']
     inlines = [DhcpOptionInline, DhcpCustomFieldInline, Ip4AddressInline]
 
-    @staticmethod
-    def num_addresses(ip4subnet):
+    def num_addresses(self, ip4subnet):
         subnet = ipaddress.IPv4Network(ip4subnet.network + "/" + ip4subnet.netmask)
         return subnet.num_addresses
 
-    @staticmethod
-    def broadcast_address(ip4subnet):
+    def broadcast_address(self, ip4subnet):
         subnet = ipaddress.IPv4Network(ip4subnet.network + "/" + ip4subnet.netmask)
         return subnet.broadcast_address
 
-    @staticmethod
-    def first_address(ip4subnet):
+    def first_address(self, ip4subnet):
         subnet = ipaddress.IPv4Network(ip4subnet.network + "/" + ip4subnet.netmask)
         return next(subnet.hosts())
 
-    @staticmethod
-    def last_address(ip4subnet):
+    def last_address(self, ip4subnet):
         subnet = ipaddress.IPv4Network(ip4subnet.network + "/" + ip4subnet.netmask)
         return list(subnet.hosts())[-1]
 
