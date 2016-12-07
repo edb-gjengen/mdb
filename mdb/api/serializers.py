@@ -34,7 +34,9 @@ class HostPXEValidateSerializer(serializers.Serializer):
             raise ValidationError('Host \'{}\' has no pxe_key.'.format(attrs['certname']))
 
         if host.pxe_key != attrs['pxe_key']:
-            raise ValidationError('Supplied pxe_key does not match host \'{}\'.'.format(attrs['certname']))
+            raise ValidationError('Supplied pxe_key \'{}\' does not match host \'{}\'.'.format(
+                    attrs['pxe_key'],
+                    attrs['certname']))
 
         self.host = host
 
