@@ -5,7 +5,6 @@ import sys
 from difflib import context_diff
 from django.core.management.base import BaseCommand
 from django.core.mail import mail_admins
-from optparse import make_option
 try:
     from subprocess import getstatusoutput
 except ImportError:
@@ -18,23 +17,22 @@ class Command(BaseCommand):
     args = '--output <path> [--force] [--restart]'
     help = 'Generates the DHCP configuration'
 
-    option_list = BaseCommand.option_list + (
-        make_option('--output',
-                    action='store',
-                    dest='output',
-                    default=None,
-                    help='Path to dhcpd.conf, defaults to stdout'),
-        make_option('--force',
-                    action='store_true',
-                    dest='force',
-                    default=False,
-                    help='Write configuration even if serial is unchanged.'),
-        make_option('--restart',
-                    action='store_true',
-                    dest='restart',
-                    default=False,
-                    help='Restart dhcp3-server if serial is changed'),
-    )
+    def add_arguments(self, parser):
+        parser.add_argument('--output',
+                            action='store',
+                            dest='output',
+                            default=None,
+                            help='Path to dhcpd.conf, defaults to stdout'),
+        parser.add_argument('--force',
+                            action='store_true',
+                            dest='force',
+                            default=False,
+                            help='Write configuration even if serial is unchanged.'),
+        parser.add_argument('--restart',
+                            action='store_true',
+                            dest='restart',
+                            default=False,
+                            help='Restart dhcp3-server if serial is changed'),
 
     def handle(self, *args, **options):
         output = options['output'] if options['output'] else sys.stdout
@@ -67,13 +65,7 @@ class Command(BaseCommand):
         with open(output, 'w') as f:
             f.write(new)
 
-        # calculate diff
-        diff = "\n".join(context_diff(
-            a=old.splitlines(),
-            b=new.splitlines(),
-            fromfile=str(config.active_serial),
-            tofile=str(config.serial),
-            lineterm=''))
+        diff = self.calculate_diff(config, new, old)
 
         print(diff)
 
@@ -104,3 +96,11 @@ class Command(BaseCommand):
                     message=message,
                     html_message='<pre>%s</pre>' % message)
                 sys.exit(0)
+
+    def calculate_diff(self, config, new, old):
+        return "\n".join(context_diff(
+            a=old.splitlines(),
+            b=new.splitlines(),
+            fromfile=str(config.active_serial),
+            tofile=str(config.serial),
+            lineterm=''))

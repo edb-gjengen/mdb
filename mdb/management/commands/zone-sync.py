@@ -6,7 +6,6 @@ from itertools import chain
 from difflib import context_diff
 from django.core.management.base import BaseCommand
 from django.core.mail import mail_admins
-from optparse import make_option
 try:
     from subprocess import getstatusoutput
 except ImportError:
@@ -19,19 +18,6 @@ class Command(BaseCommand):
     args = '[--force] [--debug]'
     help = 'Generates the bind configuration'
 
-    option_list = BaseCommand.option_list + (
-        make_option('--debug',
-                    action='store_true',
-                    dest='debug',
-                    default=False,
-                    help='Debug mode. Writes to /tmp and does not reload.'),
-        make_option('--force',
-                    action='store_true',
-                    dest='force',
-                    default=False,
-                    help='Write zone files even if serial is unchanged.'),
-    )
-
     rndc_bin = "/usr/sbin/rndc"
     reload_command = "%s reload" % rndc_bin
     freeze_command = "%s freeze" % rndc_bin
@@ -40,32 +26,35 @@ class Command(BaseCommand):
     checkzone_bin = "/usr/sbin/named-checkzone"
     checkzone_dir = "/tmp/mdb-checkzone"
     debug = False
+    force = False
     debug_dir = '/tmp/mdb-debug'
     changes = {}
 
+    def add_arguments(self, parser):
+        parser.add_argument('--debug',
+                            action='store_true',
+                            dest='debug',
+                            default=False,
+                            help='Debug mode. Writes to /tmp and does not reload.')
+        parser.add_argument('--force',
+                            action='store_true',
+                            dest='force',
+                            default=False,
+                            help='Write zone files even if serial is unchanged.')
+
     def handle(self, *args, **options):
-        self.debug = debug = options['debug']
-        force = options['force']
+        self.debug = options['debug']
+        self.force = options['force']
 
         # do the binaries exist?
-        for f in (self.checkzone_bin, self.rndc_bin):
-            if not os.path.isfile(f) and not debug:
-                print("ERROR: no such file %s, exiting..." % f)
-                if not debug:
-                    sys.exit(1)
+        self.validate_binaries_exist()
 
         # create directories if needed
         os.path.isdir(self.checkzone_dir) or os.mkdir(self.checkzone_dir)
-        debug and (os.path.isdir(self.debug_dir) or os.mkdir(self.debug_dir))
+        self.debug and (os.path.isdir(self.debug_dir) or os.mkdir(self.debug_dir))
 
         # update zones with new serials
-        for zone in chain(Domain.objects.all(),
-                          Ip4Subnet.objects.all(),
-                          Ip6Subnet.objects.all()):
-            if zone.domain_serial == zone.domain_active_serial and not force:
-                continue
-            if self.update_zone(zone):
-                self.changes[zone.domain_name]['success'] = True
+        self.update_zone_serials()
 
         # join errors, diffs and zone names
         errors = "\n\n\n".join(
@@ -75,7 +64,7 @@ class Command(BaseCommand):
         zones = ", ".join(self.changes.keys())
 
         # reload and send email with changes
-        if self.changes and not debug:
+        if self.changes and not self.debug:
             sys.stdout.write("reloading zones... ")
             for command in self.commands_in_order:
                 status, output = getstatusoutput(command)
@@ -102,9 +91,25 @@ class Command(BaseCommand):
                 html_message='<pre>%s</pre>' % message)
             sys.exit(0)
 
+    def update_zone_serials(self):
+        for zone in chain(Domain.objects.all(),
+                          Ip4Subnet.objects.all(),
+                          Ip6Subnet.objects.all()):
+            if zone.domain_serial == zone.domain_active_serial and not self.force:
+                continue
+
+            if self.update_zone(zone):
+                self.changes[zone.domain_name]['success'] = True
+
+    def validate_binaries_exist(self):
+        for f in (self.checkzone_bin, self.rndc_bin):
+            if not os.path.isfile(f) and not self.debug:
+                print("ERROR: no such file %s, exiting..." % f)
+                if not self.debug:
+                    sys.exit(1)
+
     def update_zone(self, zone):
-        zonetype = getattr(zone._meta, 'verbose_name', None) \
-            or zone._meta.model_name
+        zonetype = getattr(zone._meta, 'verbose_name', None) or zone._meta.model_name
 
         self.changes[zone.domain_name] = {
             'old_serial': zone.domain_active_serial,
@@ -130,14 +135,7 @@ class Command(BaseCommand):
         except IOError:
             old = ''
 
-        # calculate diff
-        diff = "\n".join(context_diff(
-            a=old.splitlines(),
-            b=new.splitlines(),
-            fromfile=str(zone.domain_active_serial) + '-' + zone.domain_name,
-            tofile=str(zone.domain_serial) + '-' + zone.domain_name,
-            lineterm=''))
-        self.changes[zone.domain_name]['diff'] = diff
+        self.changes[zone.domain_name]['diff'] = self.calculate_diff(new, old, zone)
 
         # validate with zonecheck
         sys.stdout.write("\t- validating... ")
@@ -146,6 +144,7 @@ class Command(BaseCommand):
             sys.stdout.write("fail\n")
             self.changes[zone.domain_name]['errors'] = output
             return False
+
         sys.stdout.write("ok\n")
 
         # write to zone file
@@ -170,10 +169,17 @@ class Command(BaseCommand):
         self.changes[zone.domain_name]['success'] = True
         return True
 
+    def calculate_diff(self, new, old, zone):
+        return "\n".join(context_diff(
+            a=old.splitlines(),
+            b=new.splitlines(),
+            fromfile=str(zone.domain_active_serial) + '-' + zone.domain_name,
+            tofile=str(zone.domain_serial) + '-' + zone.domain_name,
+            lineterm=''))
+
     def check_zone(self, zone, contents):
         zonefile = self.checkzone_dir + '/' + zone.domain_name
         with open(zonefile, 'w') as f:
             f.write(contents)
 
-        return getstatusoutput("%s %s %s" % (
-            self.checkzone_bin, zone.domain_name, zonefile))
+        return getstatusoutput("%s %s %s" % (self.checkzone_bin, zone.domain_name, zonefile))
