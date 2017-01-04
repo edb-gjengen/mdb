@@ -6,3 +6,4 @@ django-suit==0.2.23
 gunicorn==19.6.0
 ipaddress==1.0.17
 mysqlclient==1.3.9
+raven==5.32.0

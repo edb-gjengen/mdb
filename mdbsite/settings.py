@@ -1,5 +1,6 @@
 import os
 from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS as TCP
+import raven
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
@@ -77,7 +78,7 @@ INSTALLED_APPS = (
     'rest_framework',
     'rest_framework.authtoken',
     'django_extensions',
-
+    'raven.contrib.django.raven_compat',
     'mdb',
 )
 
@@ -86,6 +87,50 @@ EMAIL_SUBJECT_PREFIX = '[MDB] '
 TEMPLATE_CONTEXT_PROCESSORS = TCP + (
     'django.core.context_processors.request',  # for django-suit
 )
+
+# Logging
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': True,
+    'formatters': {
+        'verbose': {
+            'format': '%(levelname)s %(asctime)s %(module)s '
+                      '%(process)d %(thread)d %(message)s'
+        },
+    },
+    'handlers': {
+        'sentry': {
+            'level': 'WARNING',  # To capture more than ERROR, change to WARNING, INFO, etc.
+            'class': 'raven.contrib.django.raven_compat.handlers.SentryHandler',
+        },
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose'
+        }
+    },
+    'loggers': {
+        'root': {
+            'level': 'WARNING',
+            'handlers': ['sentry'],
+        },
+        'django.db.backends': {
+            'level': 'ERROR',
+            'handlers': ['console'],
+            'propagate': False,
+        },
+        'raven': {
+            'level': 'DEBUG',
+            'handlers': ['console'],
+            'propagate': False,
+        },
+        'sentry.errors': {
+            'level': 'DEBUG',
+            'handlers': ['console'],
+            'propagate': False,
+        },
+    },
+}
 
 # django-suit configuration
 SUIT_CONFIG = {
@@ -118,15 +163,24 @@ SUIT_CONFIG = {
     # misc
     'LIST_PER_PAGE': 35
 }
+
+# REST Framework
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': ('rest_framework.permissions.IsAuthenticated',),
     'PAGINATE_BY': 10
 }
 
+# PXE
 MDB_PXE_TFTP_ROOT = '/var/lib/tftpboot/pxelinux/pxelinux.cfg/'
 MDB_PXE_KERNEL = 'ubuntu/14_04/amd64/alternate/linux'
 MDB_PXE_INITRD = 'ubuntu/14_04/amd64/alternate/initrd.gz'
 MDB_PXE_PRESEED_URL = 'http://158.36.190.194/ubuntu/preseed_1404.cfg'
+
+# Sentry
+RAVEN_CONFIG = {
+    'dsn': os.getenv('RAVEN_DSN'),
+    'release': raven.fetch_git_sha(BASE_DIR)
+}
 
 try:
     from .local_settings import *
