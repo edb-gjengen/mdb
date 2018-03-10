@@ -1,4 +1,5 @@
 from django import forms
+from django.core.exceptions import ValidationError
 from django.forms import ModelChoiceField
 
 from mdb.models import Interface, Ip4Address
@@ -14,6 +15,16 @@ class Ip4ModelChoiceField(ModelChoiceField):
 
 class InterfaceForm(forms.ModelForm):
     model = Interface
+
+    def clean(self):
+        macaddr = self.cleaned_data['macaddr']
+        ip4address = self.cleaned_data['ip4address']
+
+        if Interface.objects.filter(macaddr=macaddr).exists():
+            for interface in Interface.objects.filter(macaddr=macaddr):
+                subnet = interface.ip4address.subnet
+                if subnet == ip4address.subnet and interface != self.instance:
+                    raise ValidationError('Macaddr already in this subnet')
 
     def __init__(self, *args, **kwargs):
         super(InterfaceForm, self).__init__(*args, **kwargs)
