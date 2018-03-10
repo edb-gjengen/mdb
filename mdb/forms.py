@@ -20,11 +20,10 @@ class InterfaceForm(forms.ModelForm):
         macaddr = self.cleaned_data['macaddr']
         ip4address = self.cleaned_data['ip4address']
 
-        if Interface.objects.filter(macaddr=macaddr).exists():
-            for interface in Interface.objects.filter(macaddr=macaddr):
-                subnet = interface.ip4address.subnet
-                if subnet == ip4address.subnet and interface != self.instance:
-                    raise ValidationError('Macaddr already in this subnet')
+        for interface in Interface.objects.filter(macaddr=macaddr):
+            subnet = interface.ip4address.subnet
+            if subnet == ip4address.subnet and interface != self.instance:
+                raise ValidationError('Macaddr already in this subnet')
 
     def __init__(self, *args, **kwargs):
         super(InterfaceForm, self).__init__(*args, **kwargs)
