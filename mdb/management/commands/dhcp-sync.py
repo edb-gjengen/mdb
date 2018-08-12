@@ -1,14 +1,9 @@
-from __future__ import with_statement
-
 import os
 import sys
 from difflib import context_diff
 from django.core.management.base import BaseCommand
 from django.core.mail import mail_admins
-try:
-    from subprocess import getstatusoutput
-except ImportError:
-    from commands import getstatusoutput
+from subprocess import getstatusoutput
 
 from mdb.models import DhcpConfig
 
