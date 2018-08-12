@@ -18,7 +18,7 @@ class Migration(migrations.Migration):
                 ('name', models.CharField(max_length=256)),
                 ('target', models.GenericIPAddressField(protocol='IPv6')),
                 ('created_date', models.DateTimeField(auto_now_add=True)),
-                ('domain', models.ForeignKey(to='mdb.Domain')),
+                ('domain', models.ForeignKey(to='mdb.Domain', on_delete=models.CASCADE)),
             ],
         ),
         migrations.AlterField(
