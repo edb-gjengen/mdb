@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-from __future__ import unicode_literals
-
 from django.db import models, migrations
 import django.core.validators
 import re
@@ -35,7 +33,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='interface',
             name='ip4address',
-            field=models.OneToOneField(to='mdb.Ip4Address', null=True, blank=True),
+            field=models.OneToOneField(to='mdb.Ip4Address', null=True, blank=True, on_delete=models.SET_NULL),
         ),
         migrations.AlterField(
             model_name='interface',

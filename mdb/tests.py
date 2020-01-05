@@ -3,8 +3,9 @@ import io
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.management import call_command
-from django.core.urlresolvers import reverse
 from django.test import TestCase
+from django.urls import reverse
+
 from mdb.pxe import render_pxelinux_cfg
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase

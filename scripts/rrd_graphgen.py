@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+# FIXME: python2
 import os,sys,datetime,argparse,threading,time,Queue
 from commands import getstatusoutput
 

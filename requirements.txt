@@ -1,9 +1,10 @@
-Django>=1.8,<1.9
-django-auth-ldap==1.2.8
-django-extensions==1.7.5
-djangorestframework==3.5.3
-django-suit==0.2.23
-gunicorn==19.6.0
-ipaddress==1.0.17
-mysqlclient==1.3.9
-raven==5.32.0
+-e git+https://github.com/darklow/django-suit@v2#egg=django-suit
+django-auth-ldap==2.1.*
+django-extensions==2.2.*
+django==2.2.*
+djangorestframework==3.11.*
+fabric==2.5.*
+gunicorn==20.0.*
+ipaddress==1.0.*
+mysqlclient==1.4.6
+sentry-sdk==0.13.*

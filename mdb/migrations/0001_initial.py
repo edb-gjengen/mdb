@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-from __future__ import unicode_literals
-
 from django.db import models, migrations
 import re
 import django.core.validators
@@ -81,7 +79,7 @@ class Migration(migrations.Migration):
                 ('name', models.CharField(max_length=256)),
                 ('target', models.CharField(max_length=256)),
                 ('created_date', models.DateTimeField(auto_now_add=True)),
-                ('domain', models.ForeignKey(to='mdb.Domain')),
+                ('domain', models.ForeignKey(to='mdb.Domain', on_delete=models.CASCADE)),
             ],
             options={
             },
@@ -94,7 +92,7 @@ class Migration(migrations.Migration):
                 ('name', models.CharField(max_length=256)),
                 ('target', models.CharField(max_length=256)),
                 ('created_date', models.DateTimeField(auto_now_add=True)),
-                ('domain', models.ForeignKey(to='mdb.Domain')),
+                ('domain', models.ForeignKey(to='mdb.Domain', on_delete=models.CASCADE)),
             ],
             options={
             },
@@ -112,7 +110,7 @@ class Migration(migrations.Migration):
                 ('port', models.IntegerField()),
                 ('target', models.CharField(max_length=256)),
                 ('created_date', models.DateTimeField(auto_now_add=True)),
-                ('domain', models.ForeignKey(to='mdb.Domain')),
+                ('domain', models.ForeignKey(to='mdb.Domain', on_delete=models.CASCADE)),
             ],
             options={
             },
@@ -125,7 +123,7 @@ class Migration(migrations.Migration):
                 ('name', models.CharField(max_length=256)),
                 ('target', models.CharField(max_length=256)),
                 ('created_date', models.DateTimeField(auto_now_add=True)),
-                ('domain', models.ForeignKey(to='mdb.Domain')),
+                ('domain', models.ForeignKey(to='mdb.Domain', on_delete=models.CASCADE)),
             ],
             options={
             },
@@ -174,8 +172,8 @@ class Migration(migrations.Migration):
                 ('pxe_filename', models.CharField(max_length=64, blank=True)),
                 ('dhcp_client', models.BooleanField(default=False)),
                 ('created_date', models.DateTimeField(auto_now_add=True)),
-                ('domain', models.ForeignKey(to='mdb.Domain')),
-                ('host', models.ForeignKey(to='mdb.Host')),
+                ('domain', models.ForeignKey(to='mdb.Domain', on_delete=models.CASCADE)),
+                ('host', models.ForeignKey(to='mdb.Host', on_delete=models.CASCADE)),
             ],
             options={
             },
@@ -217,7 +215,7 @@ class Migration(migrations.Migration):
                 ('dhcp_dynamic', models.BooleanField(default=False)),
                 ('dhcp_dynamic_start', models.IPAddressField(null=True, blank=True)),
                 ('dhcp_dynamic_end', models.IPAddressField(null=True, blank=True)),
-                ('dhcp_config', models.ForeignKey(to='mdb.DhcpConfig')),
+                ('dhcp_config', models.ForeignKey(to='mdb.DhcpConfig', on_delete=models.CASCADE)),
             ],
             options={
                 'verbose_name': 'IPv4 subnet',
@@ -229,7 +227,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('address', models.CharField(max_length=64)),
-                ('interface', models.ForeignKey(to='mdb.Interface')),
+                ('interface', models.ForeignKey(to='mdb.Interface', on_delete=models.CASCADE)),
             ],
             options={
                 'verbose_name': 'IPv6 address',
@@ -309,7 +307,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='operatingsystem',
             name='architecture',
-            field=models.ForeignKey(to='mdb.OsArchitecture'),
+            field=models.ForeignKey(to='mdb.OsArchitecture', on_delete=models.CASCADE),
             preserve_default=True,
         ),
         migrations.AddField(
@@ -321,7 +319,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='ip6address',
             name='subnet',
-            field=models.ForeignKey(to='mdb.Ip6Subnet'),
+            field=models.ForeignKey(to='mdb.Ip6Subnet', on_delete=models.CASCADE),
             preserve_default=True,
         ),
         migrations.AddField(
@@ -333,25 +331,25 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='ip4address',
             name='subnet',
-            field=models.ForeignKey(to='mdb.Ip4Subnet'),
+            field=models.ForeignKey(to='mdb.Ip4Subnet', on_delete=models.CASCADE),
             preserve_default=True,
         ),
         migrations.AddField(
             model_name='interface',
             name='ip4address',
-            field=models.ForeignKey(null=True, blank=True, to='mdb.Ip4Address', unique=True),
+            field=models.ForeignKey(null=True, blank=True, to='mdb.Ip4Address', unique=True, on_delete=models.SET_NULL),
             preserve_default=True,
         ),
         migrations.AddField(
             model_name='host',
             name='host_type',
-            field=models.ForeignKey(to='mdb.HostType'),
+            field=models.ForeignKey(to='mdb.HostType', on_delete=models.CASCADE),
             preserve_default=True,
         ),
         migrations.AddField(
             model_name='host',
             name='operating_system',
-            field=models.ForeignKey(to='mdb.OperatingSystem'),
+            field=models.ForeignKey(to='mdb.OperatingSystem', on_delete=models.CASCADE),
             preserve_default=True,
         ),
         migrations.AddField(
@@ -369,13 +367,13 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='dhcpoption',
             name='ip4subnet',
-            field=models.ForeignKey(to='mdb.Ip4Subnet'),
+            field=models.ForeignKey(to='mdb.Ip4Subnet', on_delete=models.CASCADE),
             preserve_default=True,
         ),
         migrations.AddField(
             model_name='dhcpcustomfield',
             name='ip4subnet',
-            field=models.ForeignKey(to='mdb.Ip4Subnet'),
+            field=models.ForeignKey(to='mdb.Ip4Subnet', on_delete=models.CASCADE),
             preserve_default=True,
         ),
     ]

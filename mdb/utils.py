@@ -4,7 +4,7 @@ import re
 
 def format_domain_serial_and_add_one(serial):
     today = datetime.datetime.now()
-    res = re.findall("^%4d%02d%02d(\d\d)$" % (
+    res = re.findall(r"^%4d%02d%02d(\d\d)$" % (
         today.year, today.month, today.day), str(serial), re.DOTALL)
 
     if len(res) == 0:

@@ -1,4 +1,5 @@
 import ipaddress
+from django.conf import settings
 
 from django.contrib import admin, messages
 from django.db.models import Count
@@ -7,6 +8,9 @@ from mdb.models import (
     Ip6Address, Interface, Ip4Address, DhcpOption, DhcpCustomField, DomainSrvRecord, DomainTxtRecord,
     DomainCnameRecord, DomainARecord, Domain, Host, Ip4Subnet, Ip6Subnet, Nameserver, MailExchange, OperatingSystem,
     HostType, DhcpConfig, DomainAAAARecord)
+
+
+admin.site.site_header = settings.ADMIN_SITE_NAME
 
 
 class Ip6AddressInline(admin.TabularInline):
