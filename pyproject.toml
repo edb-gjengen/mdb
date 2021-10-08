@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "mdb"
+version = "0.1.0"
+description = "Machine Database - A Django app for managing computer equipment"
+license = "GPL-2.0-or-later"
+authors = ["EDB <edb@neuf.no>"]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+django-auth-ldap = "2.1.*"
+django-extensions = "2.2.*"
+Django = "2.2.*"
+djangorestframework = "3.11.*"
+fabric = "2.5.*"
+gunicorn = "20.0.*"
+ipaddress = "1.0.*"
+mysqlclient = "1.4.6"
+sentry-sdk = "0.13.*"
+
+[tool.poetry.dev-dependencies]
+black = "^21.9b0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
