@@ -14,8 +14,8 @@ def deploy(c):
 
     with c.cd(project_path), c.prefix('source {}/venv/bin/activate'.format(project_path)):
         c.run('git pull')  # Get source
-        c.run('pip install -U pip')
-        c.run('pip install -r requirements.txt')  # install deps in virtualenv
+        c.run('pip install -U pip poetry')
+        c.run('poetry install --dev')  # install deps in virtualenv
         c.run('python manage.py collectstatic --noinput')  # Collect static
         c.run('python manage.py migrate')  # Run DB migrations
 
