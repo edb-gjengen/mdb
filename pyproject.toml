@@ -6,7 +6,7 @@ license = "GPL-2.0-or-later"
 authors = ["EDB <edb@neuf.no>"]
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.6"
 django-auth-ldap = "*"
 django-extensions = "*"
 Django = "*"
@@ -19,6 +19,7 @@ sentry-sdk = "*"
 
 [tool.poetry.dev-dependencies]
 black = "*"
+fabric = "^2.6.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
