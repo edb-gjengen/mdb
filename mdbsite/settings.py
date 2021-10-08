@@ -76,7 +76,6 @@ INSTALLED_APPS = (
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-    'mdb.apps.SuitConfig',
     'django.contrib.admin',
 
     'rest_framework',
