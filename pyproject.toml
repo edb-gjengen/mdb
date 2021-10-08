@@ -7,18 +7,18 @@ authors = ["EDB <edb@neuf.no>"]
 
 [tool.poetry.dependencies]
 python = "^3.9"
-django-auth-ldap = "2.1.*"
-django-extensions = "2.2.*"
-Django = "2.2.*"
-djangorestframework = "3.11.*"
-fabric = "2.5.*"
-gunicorn = "20.0.*"
-ipaddress = "1.0.*"
-mysqlclient = "1.4.6"
-sentry-sdk = "0.13.*"
+django-auth-ldap = "*"
+django-extensions = "*"
+Django = "*"
+djangorestframework = "*"
+fabric = "*"
+gunicorn = "*"
+ipaddress = "*"
+mysqlclient = "*"
+sentry-sdk = "*"
 
 [tool.poetry.dev-dependencies]
-black = "^21.9b0"
+black = "*"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
