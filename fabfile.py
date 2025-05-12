@@ -12,7 +12,7 @@ def deploy(c):
 
     c = Connection(host='gitdeploy@sega.neuf.no', gateway=Connection('login.neuf.no', user=proxy_user))
 
-    with c.cd(project_path), c.prefix('source {}/venv/bin/activate'.format(project_path)):
+    with c.cd(project_path), c.prefix('source {}/.venv/bin/activate'.format(project_path)):
         c.run('git pull')  # Get source
         c.run('pip install -U uv')
         c.run('uv sync')  # install deps in virtualenv

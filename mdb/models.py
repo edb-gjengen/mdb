@@ -1,11 +1,11 @@
-from django.db import models
-from django.utils.translation import ugettext_lazy as _
-from mdb.pxe import host_as_pxe_files
-
-from mdb.validators import validate_hostname, validate_macaddr
-
-import ipaddress
 import datetime
+import ipaddress
+
+from django.db import models
+from django.utils.translation import gettext_lazy as _
+
+from mdb.pxe import host_as_pxe_files
+from mdb.validators import validate_hostname, validate_macaddr
 
 
 class Nameserver(models.Model):
