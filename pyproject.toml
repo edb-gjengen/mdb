@@ -1,26 +1,30 @@
-[tool.poetry]
+[project]
 name = "mdb"
 version = "0.1.0"
 description = "Machine Database - A Django app for managing computer equipment"
+authors = [
+    { name = "EDB", email = "edb@neuf.no" },
+]
+requires-python = "~=3.10"
 license = "GPL-2.0-or-later"
-authors = ["EDB <edb@neuf.no>"]
+dependencies = [
+    "django>=5.2.1",
+    "django-auth-ldap>=5.2.0",
+    "django-extensions>=4.1",
+    "djangorestframework>=3.16.0",
+    "fabric>=2.7.1",
+    "gunicorn>=23.0.0",
+    "ipaddress>=1.0.23,<2.0.0",
+    "mysqlclient>=2.0.3,<3.0.0",
+    "sentry-sdk>=2.27.0",
+]
 
-[tool.poetry.dependencies]
-python = "^3.6"
-django-auth-ldap = "*"
-django-extensions = "*"
-Django = "*"
-djangorestframework = "*"
-fabric = "*"
-gunicorn = "*"
-ipaddress = "*"
-mysqlclient = "*"
-sentry-sdk = "*"
-
-[tool.poetry.dev-dependencies]
-black = "*"
-fabric = "^2.6.0"
+[dependency-groups]
+dev = [
+    "fabric>=2.6.0,<3.0.0",
+    "ruff>=0.11.9,<1.0.0",
+]
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"

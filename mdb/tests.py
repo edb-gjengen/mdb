@@ -5,12 +5,11 @@ from django.contrib.auth.models import User
 from django.core.management import call_command
 from django.test import TestCase
 from django.urls import reverse
-
-from mdb.pxe import render_pxelinux_cfg
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
 
 from mdb.models import Host, OperatingSystem
+from mdb.pxe import render_pxelinux_cfg
 
 
 class MyAPITestCases(APITestCase):
@@ -32,7 +31,7 @@ class MyAPITestCases(APITestCase):
         }
         self.client.credentials(HTTP_AUTHORIZATION='Token {}'.format(self.token.key))
         res = self.client.post(reverse('api-validate-host-secret'), data, format='json')
-        self.assertEquals(res.status_code, 200, res.content)
+        self.assertEqual(res.status_code, 200, res.content)
         self.assertFalse(Host.objects.get(pk=self.host.pk).pxe_installable)
 
 

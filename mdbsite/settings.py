@@ -1,4 +1,5 @@
 import os
+
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
 DEBUG = os.getenv('DJANGO_DEBUG', True)
@@ -21,7 +22,6 @@ LANGUAGE_CODE = 'en-us'
 SITE_ID = 1
 
 USE_I18N = True
-USE_L10N = True
 
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
