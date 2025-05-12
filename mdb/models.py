@@ -149,7 +149,10 @@ class DomainSrvRecord(models.Model):
 
 class DomainTxtRecord(models.Model):
     name = models.CharField(max_length=256)
-    target = models.CharField(max_length=256)
+    # note that the max length of a TXT record is 255, but
+    # bind allows for longer records by splitting them
+    # into chunks as: "...255..." "...another 255..."
+    target = models.CharField(max_length=2048)
     domain = models.ForeignKey(Domain, models.CASCADE)
     created_date = models.DateTimeField(auto_now_add=True)
 
