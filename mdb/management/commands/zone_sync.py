@@ -1,8 +1,8 @@
 import os
 
-from django.core.mail import mail_admins
 from django.core.management.base import BaseCommand
 
+from mdb.services import discord
 from mdb.services.zone_sync import ZoneSyncService
 
 
@@ -61,31 +61,36 @@ class Command(BaseCommand):
             diffs = "\n\n\n".join(
                 [v["diff"] for v in service.changes.values() if v["diff"]]
             )
-            zones = ", ".join(service.changes.keys())
+            zones = list(service.changes.keys())
             self.reload_and_notify(service, errors, diffs, zones)
 
     def reload_and_notify(self, service, errors, diffs, zones):
         self.stdout.write("reloading zones... ")
         success, failed_command, output = service.run_reload_commands()
 
+        zone_list = "\n".join("- " + z for z in zones)
+
         if not success:
             self.stdout.write("fail\n")
             message = (
                 "Failed to reload zones, please inspect...\n\n"
-                + "%s@%s$ %s" % (os.getlogin(), os.uname()[1], failed_command)
-                + "\n%s\n\n\n%s\n\n\n%s" % (output, errors, diffs)
+                "%s@%s$ %s\n%s\n%s" % (os.getlogin(), os.uname()[1], failed_command, output, zone_list)
             )
-            mail_admins(
-                subject="FAIL: bind (%s changed: %s)" % (len(service.changes), zones),
+            if errors:
+                message += "\n\n" + errors
+            discord.notify(
+                subject="⚠️ FAIL: bind",
                 message=message,
-                html_message="<pre>%s</pre>" % message,
+                preformatted=diffs or None,
             )
             raise SystemExit(1)
 
         self.stdout.write("ok\n")
-        message = "Successfully updated bind zone files\n\n%s\n\n%s" % (errors, diffs)
-        mail_admins(
-            subject="Success: bind (%s changed: %s)" % (len(service.changes), zones),
+        message = "Successfully updated bind zone files for\n" + zone_list
+        if errors:
+            message += "\n\n" + errors
+        discord.notify(
+            subject="✅ Success: bind",
             message=message,
-            html_message="<pre>%s</pre>" % message,
+            preformatted=diffs or None,
         )

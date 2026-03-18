@@ -47,42 +47,51 @@ def test_run_reload_commands_stops_on_first_failure(service):
 
 def test_reload_and_notify_success_writes_ok(cmd):
     svc = make_service()
-    with patch("mdb.management.commands.zone_sync.mail_admins"):
-        cmd.reload_and_notify(svc, errors="", diffs="diff", zones="example.org")
+    with patch("mdb.management.commands.zone_sync.discord") as mock_discord:
+        cmd.reload_and_notify(svc, errors="", diffs="diff", zones=["example.org"])
     assert "ok" in cmd.stdout.getvalue()
 
 
-def test_reload_and_notify_success_sends_mail(cmd):
+def test_reload_and_notify_success_calls_discord(cmd):
     svc = make_service()
-    with patch("mdb.management.commands.zone_sync.mail_admins") as mock_mail:
-        cmd.reload_and_notify(svc, errors="", diffs="diff", zones="example.org")
-    mock_mail.assert_called_once()
-    assert "Success" in mock_mail.call_args.kwargs["subject"]
+    with patch("mdb.management.commands.zone_sync.discord") as mock_discord:
+        cmd.reload_and_notify(svc, errors="", diffs="diff", zones=["example.org"])
+    mock_discord.notify.assert_called_once()
+    assert "✅" in mock_discord.notify.call_args.kwargs["subject"]
+    assert "- example.org" in mock_discord.notify.call_args.kwargs["message"]
+
+
+def test_reload_and_notify_success_passes_diff_as_preformatted(cmd):
+    svc = make_service()
+    with patch("mdb.management.commands.zone_sync.discord") as mock_discord:
+        cmd.reload_and_notify(svc, errors="", diffs="- old\n+ new", zones=["example.org"])
+    assert mock_discord.notify.call_args.kwargs["preformatted"] == "- old\n+ new"
 
 
 def test_reload_and_notify_failure_writes_fail_and_exits(cmd):
     svc = make_service()
     svc.run_reload_commands.return_value = (False, "/usr/sbin/rndc freeze", "timed out")
-    with patch("mdb.management.commands.zone_sync.mail_admins"):
+    with patch("mdb.management.commands.zone_sync.discord"):
         with patch("os.getlogin", return_value="testuser"):
             with pytest.raises(SystemExit) as exc:
-                cmd.reload_and_notify(svc, errors="", diffs="", zones="example.org")
+                cmd.reload_and_notify(svc, errors="", diffs="", zones=["example.org"])
     assert exc.value.code == 1
     assert "fail" in cmd.stdout.getvalue()
 
 
-def test_reload_and_notify_failure_mail_includes_command_and_output(cmd):
+def test_reload_and_notify_failure_discord_includes_command_and_output(cmd):
     svc = make_service()
     svc.run_reload_commands.return_value = (False, "/usr/sbin/rndc freeze", "timed out")
-    with patch("mdb.management.commands.zone_sync.mail_admins") as mock_mail:
+    with patch("mdb.management.commands.zone_sync.discord") as mock_discord:
         with patch("os.getlogin", return_value="testuser"):
             with pytest.raises(SystemExit):
-                cmd.reload_and_notify(svc, errors="", diffs="", zones="example.org")
-    subject = mock_mail.call_args.kwargs["subject"]
-    message = mock_mail.call_args.kwargs["message"]
-    assert "FAIL" in subject
+                cmd.reload_and_notify(svc, errors="", diffs="", zones=["example.org"])
+    subject = mock_discord.notify.call_args.kwargs["subject"]
+    message = mock_discord.notify.call_args.kwargs["message"]
+    assert "⚠️" in subject
     assert "rndc freeze" in message
     assert "timed out" in message
+    assert "- example.org" in message
 
 
 # --- handle ---
