@@ -20,7 +20,7 @@ def api_client():
 
 @pytest.fixture
 def user_with_token(db_with_fixtures):
-    user = User.objects.create(username='admin')
+    user = User.objects.create(username="admin")
     token = Token.objects.create(user=user)
     return user, token
 
@@ -34,10 +34,12 @@ def host(db_with_fixtures):
 def test_validate_puppet_host_by_secret(api_client, user_with_token, host):
     _, token = user_with_token
     data = {
-        'pxe_key': host.pxe_key,
-        'certname': '{}.{}'.format(host.hostname, host.interface_set.first().domain.domain_name),
+        "pxe_key": host.pxe_key,
+        "certname": "{}.{}".format(
+            host.hostname, host.interface_set.first().domain.domain_name
+        ),
     }
-    api_client.credentials(HTTP_AUTHORIZATION='Token {}'.format(token.key))
-    res = api_client.post(reverse('api-validate-host-secret'), data, format='json')
+    api_client.credentials(HTTP_AUTHORIZATION="Token {}".format(token.key))
+    res = api_client.post(reverse("api-validate-host-secret"), data, format="json")
     assert res.status_code == 200, res.content
     assert not Host.objects.get(pk=host.pk).pxe_installable

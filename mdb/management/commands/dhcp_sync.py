@@ -64,7 +64,8 @@ class Command(BaseCommand):
             self.stdout.write("fail\n")
             message = (
                 "Failed to restart isc-dhcp-server, please inspect...\n\n"
-                "%s@%s$ %s\n%s" % (os.getlogin(), os.uname()[1], service.restart_command, output)
+                "%s@%s$ %s\n%s"
+                % (os.getlogin(), os.uname()[1], service.restart_command, output)
             )
             discord.notify(
                 subject="⚠️ FAIL: dhcpd %s -> %s" % (old_serial, config.active_serial),

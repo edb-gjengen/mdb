@@ -46,7 +46,9 @@ def set_domain_name_for_subnet(sender, instance, **kwargs):
     # when the subnet is changed
     if instance.dhcp_config:
         # instance.dhcp_config.serial = instance.dhcp_config.serial + 1
-        instance.dhcp_config.serial = format_domain_serial_and_add_one(instance.dhcp_config.serial)
+        instance.dhcp_config.serial = format_domain_serial_and_add_one(
+            instance.dhcp_config.serial
+        )
         instance.dhcp_config.save()
 
 
@@ -56,7 +58,9 @@ def set_domain_name_for_ipv6_subnet(sender, instance, **kwargs):
         return
 
     network = ipaddress.IPv6Address("%s::" % instance.network)
-    instance.domain_name = ".".join(network.exploded.replace(":", "")[:16])[::-1] + ".ip6.arpa"
+    instance.domain_name = (
+        ".".join(network.exploded.replace(":", "")[:16])[::-1] + ".ip6.arpa"
+    )
 
 
 @receiver(post_save, sender=Interface)
@@ -77,16 +81,22 @@ def update_domain_serial_when_change_to_host(sender, instance, created, **kwargs
     for interface in instance.interface_set.all():
         if interface.domain is not None:
             domain = interface.domain
-            domain.domain_serial = format_domain_serial_and_add_one(domain.domain_serial)
+            domain.domain_serial = format_domain_serial_and_add_one(
+                domain.domain_serial
+            )
             domain.save()
         if interface.ip4address is not None:
             subnet = interface.ip4address.subnet
-            subnet.domain_serial = format_domain_serial_and_add_one(subnet.domain_serial)
+            subnet.domain_serial = format_domain_serial_and_add_one(
+                subnet.domain_serial
+            )
             subnet.save()
 
 
 @receiver(post_save, sender=Host)
-def create_pxe_key_and_write_pxe_files_when_host_changes(sender, instance, created, **kwargs):
+def create_pxe_key_and_write_pxe_files_when_host_changes(
+    sender, instance, created, **kwargs
+):
     host = instance
 
     if not host.pxe_key:
@@ -99,7 +109,7 @@ def create_pxe_key_and_write_pxe_files_when_host_changes(sender, instance, creat
         path = os.path.join(settings.MDB_PXE_TFTP_ROOT, pxe_file_name)
         if host.pxe_installable:
             # Write pxeconfig file to disk
-            with open(path, 'w+') as f:
+            with open(path, "w+") as f:
                 f.write(pxe_file)
                 logger.info("Created or updated {}".format(path))
             os.chmod(path, 0o644)  # Not writeable for all
@@ -110,7 +120,7 @@ def create_pxe_key_and_write_pxe_files_when_host_changes(sender, instance, creat
             for _if in interfaces:
                 changed = False
                 if not _if.pxe_filename:
-                    _if.pxe_filename = 'pxelinux.0'  # don't overwrite
+                    _if.pxe_filename = "pxelinux.0"  # don't overwrite
                     changed = True
                 if not _if.dhcp_client:
                     _if.dhcp_client = True
@@ -137,6 +147,7 @@ def update_domain_serial_when_interface_deleted(sender, instance, **kwargs):
         subnet = instance.ip4address.subnet
         subnet.domain_serial += 1
         subnet.save()
+
 
 # @receiver(pre_save, sender=Domain)
 # def update_domain_serial_when_domain_is_saved(sender, instance, **kwargs):

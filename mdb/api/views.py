@@ -17,4 +17,4 @@ class HostPXEValidate(APIView):
 
         serializer.save()  # sets Host.pxe_installable=False
 
-        return Response({'valid_pxe_key': True})
+        return Response({"valid_pxe_key": True})

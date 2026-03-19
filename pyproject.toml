@@ -28,6 +28,21 @@ dev = [
     "ruff>=0.15.6,<1.0.0",
 ]
 
+[tool.ruff]
+exclude = ["mdb/migrations/**"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "UP",   # pyupgrade
+]
+ignore = [
+    "E501",  # line-too-long
+]
+
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "mdbsite.settings"
 python_files = ["tests/test_*.py"]

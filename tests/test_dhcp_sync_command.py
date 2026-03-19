@@ -31,6 +31,7 @@ def make_service(serial=2, active_serial=1, restart_success=True, restart_output
 
 # --- handle: nothing to do ---
 
+
 def test_handle_prints_nothing_to_do_when_no_update_needed(cmd):
     svc, config = make_service(serial=1, active_serial=1)
     svc.needs_update.return_value = False
@@ -40,6 +41,7 @@ def test_handle_prints_nothing_to_do_when_no_update_needed(cmd):
 
 
 # --- handle: stdout mode ---
+
 
 def test_handle_prints_config_to_stdout_when_no_output_path(cmd):
     svc, config = make_service()
@@ -57,6 +59,7 @@ def test_handle_does_not_write_file_when_no_output_path(cmd):
 
 
 # --- handle: file mode ---
+
 
 def test_handle_calls_write_config_when_output_given(cmd, tmp_path):
     svc, config = make_service()
@@ -85,6 +88,7 @@ def test_handle_calls_restart_and_notify_when_restart_true(cmd, tmp_path):
 
 
 # --- restart_and_notify ---
+
 
 def test_restart_and_notify_success_writes_ok(cmd):
     svc, config = make_service(restart_success=True)

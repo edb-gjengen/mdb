@@ -9,7 +9,9 @@ def make_config(serial=2, active_serial=1):
     config = MagicMock()
     config.serial = serial
     config.active_serial = active_serial
-    config.dhcpd_configuration.return_value = "# dhcpd config\nsubnet 10.0.0.0 netmask 255.255.255.0 {}\n"
+    config.dhcpd_configuration.return_value = (
+        "# dhcpd config\nsubnet 10.0.0.0 netmask 255.255.255.0 {}\n"
+    )
     return config
 
 
@@ -19,6 +21,7 @@ def service():
 
 
 # --- needs_update ---
+
 
 def test_needs_update_true_when_serials_differ(service):
     config = make_config(serial=2, active_serial=1)
@@ -38,6 +41,7 @@ def test_needs_update_true_when_force_even_if_serials_match():
 
 # --- calculate_diff ---
 
+
 def test_calculate_diff_identical_returns_empty(service):
     config = make_config()
     assert service.calculate_diff(config, "line\n", "line\n") == ""
@@ -53,6 +57,7 @@ def test_calculate_diff_format(service):
 
 
 # --- write_config ---
+
 
 def test_write_config_creates_file_with_config_contents(service, tmp_path):
     config = make_config()
@@ -99,6 +104,7 @@ def test_write_config_diff_reflects_changes(service, tmp_path):
 
 # --- restart_service ---
 
+
 def test_restart_service_returns_true_on_success(service):
     with patch("mdb.services.dhcp_sync.getstatusoutput", return_value=(0, "")):
         success, output = service.restart_service()
@@ -107,7 +113,9 @@ def test_restart_service_returns_true_on_success(service):
 
 
 def test_restart_service_returns_false_on_failure(service):
-    with patch("mdb.services.dhcp_sync.getstatusoutput", return_value=(1, "Job failed")):
+    with patch(
+        "mdb.services.dhcp_sync.getstatusoutput", return_value=(1, "Job failed")
+    ):
         success, output = service.restart_service()
     assert success is False
     assert output == "Job failed"

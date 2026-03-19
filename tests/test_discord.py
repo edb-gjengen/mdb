@@ -59,16 +59,23 @@ def test_send_json_posts_with_mdb_username():
 def test_send_as_file_posts_multipart_with_attachment():
     mock_resp = MagicMock()
     with patch("requests.post", return_value=mock_resp) as mock_post:
-        discord._send_as_file("https://discord.example/webhook", "Subject", "full content")
-    assert mock_post.call_args.kwargs.get("files") or "files" in str(mock_post.call_args)
+        discord._send_as_file(
+            "https://discord.example/webhook", "Subject", "full content"
+        )
+    assert mock_post.call_args.kwargs.get("files") or "files" in str(
+        mock_post.call_args
+    )
     mock_resp.raise_for_status.assert_called_once()
 
 
 def test_send_as_file_content_mentions_attachment():
     import json
+
     mock_resp = MagicMock()
     with patch("requests.post", return_value=mock_resp) as mock_post:
-        discord._send_as_file("https://discord.example/webhook", "MySubject", "full content")
+        discord._send_as_file(
+            "https://discord.example/webhook", "MySubject", "full content"
+        )
     data = mock_post.call_args.kwargs["data"]
     payload = json.loads(data["payload_json"])
     assert "MySubject" in payload["content"]

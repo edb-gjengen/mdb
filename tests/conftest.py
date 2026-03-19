@@ -48,16 +48,15 @@ def db_domain(db, tmp_path):
     DomainARecord.objects.create(domain=domain, name="mail", target="9.10.11.12")
     DomainARecord.objects.create(domain=domain, name="www", target="1.2.3.4")
     DomainAAAARecord.objects.create(domain=domain, name="www", target="2001:db8::1")
-    DomainCnameRecord.objects.create(domain=domain, name="ftp", target="www.example.org.")
+    DomainCnameRecord.objects.create(
+        domain=domain, name="ftp", target="www.example.org."
+    )
     DomainTxtRecord.objects.create(domain=domain, name="@", target='"v=spf1 mx ~all"')
     return domain
 
 
 def load_command_class():
-    path = (
-        pathlib.Path(__file__).parent.parent
-        / "mdb/management/commands/zone-sync.py"
-    )
+    path = pathlib.Path(__file__).parent.parent / "mdb/management/commands/zone-sync.py"
     spec = importlib.util.spec_from_file_location("zone_sync_command", path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)

@@ -7,9 +7,13 @@ from mdb.api.views import HostPXEValidate
 admin.autodiscover()
 
 urlpatterns = [
-    re_path(r'^$', RedirectView.as_view(url='admin/', permanent=True)),
-    path('admin/', admin.site.urls),
-    path('api/validate-host-secret/', HostPXEValidate.as_view(), name='api-validate-host-secret')
+    re_path(r"^$", RedirectView.as_view(url="admin/", permanent=True)),
+    path("admin/", admin.site.urls),
+    path(
+        "api/validate-host-secret/",
+        HostPXEValidate.as_view(),
+        name="api-validate-host-secret",
+    ),
 ]
 
 urlpatterns += staticfiles_urlpatterns()

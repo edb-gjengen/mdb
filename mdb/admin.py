@@ -48,45 +48,70 @@ class InterfaceInline(admin.TabularInline):
 
 
 class HostAdmin(admin.ModelAdmin):
-    ordering = ('hostname',)
+    ordering = ("hostname",)
     inlines = [InterfaceInline]
-    list_display = ['hostname', 'owner', 'host_type', 'location', 'mac_addresses', 'ip_addresses', 'in_domain',
-                    'pxe_installable', 'ipv6_enabled']
-    list_filter = ['host_type', 'owner', 'location', 'pxe_installable']
-    readonly_fields = ['kerberos_principal_name', 'kerberos_principal_created_date',
-                       'kerberos_principal_created']
-    search_fields = ['hostname', 'location', 'interface__macaddr', 'interface__ip4address__address']
+    list_display = [
+        "hostname",
+        "owner",
+        "host_type",
+        "location",
+        "mac_addresses",
+        "ip_addresses",
+        "in_domain",
+        "pxe_installable",
+        "ipv6_enabled",
+    ]
+    list_filter = ["host_type", "owner", "location", "pxe_installable"]
+    readonly_fields = [
+        "kerberos_principal_name",
+        "kerberos_principal_created_date",
+        "kerberos_principal_created",
+    ]
+    search_fields = [
+        "hostname",
+        "location",
+        "interface__macaddr",
+        "interface__ip4address__address",
+    ]
     fieldsets = (
-        ('Owner Information', {
-            'fields': ('owner', 'location', 'description')
-        }),
-        ('Hardware and Software Information', {
-            'fields': (
-                ('hostname', 'host_type'),
-                ('pxe_key', 'pxe_installable'),
-                ('brand', 'model'),
-                'serial_number',
-                ('operating_system', 'virtual'))
-        }),
+        ("Owner Information", {"fields": ("owner", "location", "description")}),
+        (
+            "Hardware and Software Information",
+            {
+                "fields": (
+                    ("hostname", "host_type"),
+                    ("pxe_key", "pxe_installable"),
+                    ("brand", "model"),
+                    "serial_number",
+                    ("operating_system", "virtual"),
+                )
+            },
+        ),
     )
-    actions = ['set_installable']
+    actions = ["set_installable"]
 
     def mac_addresses(self, host):
-        addresses = host.interface_set.filter(macaddr__isnull=False).values_list('macaddr', flat=True)
+        addresses = host.interface_set.filter(macaddr__isnull=False).values_list(
+            "macaddr", flat=True
+        )
         return ", ".join(addresses)
 
     def ip_addresses(self, host):
-        addresses = host.interface_set.filter(ip4address__isnull=False).values_list('ip4address__address', flat=True)
+        addresses = host.interface_set.filter(ip4address__isnull=False).values_list(
+            "ip4address__address", flat=True
+        )
         return ", ".join(addresses)
 
     def in_domain(self, host):
-        domains = host.interface_set.values_list('domain__domain_name', flat=True)
+        domains = host.interface_set.values_list("domain__domain_name", flat=True)
         return ",".join(domains)
 
     in_domain.short_description = "in domains"
 
     def ipv6_enabled(self, host):
-        ipv6_ifs = host.interface_set.annotate(num_ipv6=Count('ip6address')).filter(num_ipv6__gt=0)
+        ipv6_ifs = host.interface_set.annotate(num_ipv6=Count("ip6address")).filter(
+            num_ipv6__gt=0
+        )
         return ipv6_ifs.exists()
 
     ipv6_enabled.boolean = True
@@ -94,8 +119,10 @@ class HostAdmin(admin.ModelAdmin):
 
     @staticmethod
     def _get_host_warning_message(host, ifs):
-        ifs_str = ', '.join([_if.name for _if in ifs])
-        return 'Host {} might not be installable since interface(s) {} has no IP set.'.format(host, ifs_str)
+        ifs_str = ", ".join([_if.name for _if in ifs])
+        return "Host {} might not be installable since interface(s) {} has no IP set.".format(
+            host, ifs_str
+        )
 
     def set_installable(self, request, queryset):
         invalid_ifs_per_host = []
@@ -103,12 +130,16 @@ class HostAdmin(admin.ModelAdmin):
         for obj in queryset:
             invalid_ifs = obj.interface_set.filter(ip4address__isnull=True)
             if invalid_ifs.exists():
-                invalid_ifs_per_host.append(self._get_host_warning_message(obj, invalid_ifs))
+                invalid_ifs_per_host.append(
+                    self._get_host_warning_message(obj, invalid_ifs)
+                )
             obj.pxe_installable = True
             obj.save()  # triggers post save signal
 
         if invalid_ifs_per_host:
-            self.message_user(request, message='\n'.join(invalid_ifs_per_host), level=messages.WARNING)
+            self.message_user(
+                request, message="\n".join(invalid_ifs_per_host), level=messages.WARNING
+            )
 
     set_installable.short_description = "Mark selected hosts as PXE installable"
 
@@ -119,7 +150,7 @@ class HostAdmin(admin.ModelAdmin):
 class Ip4AddressInline(admin.TabularInline):
     model = Ip4Address
     extra = 0
-    readonly_fields = ['address', 'assigned_to_host']
+    readonly_fields = ["address", "assigned_to_host"]
 
     def assigned_to_host(self, addr):
         return addr.interface.host
@@ -138,7 +169,15 @@ class DhcpCustomFieldInline(admin.TabularInline):
 
 
 class SubnetAdmin(admin.ModelAdmin):
-    list_display = ['name', 'network', 'netmask', 'num_addresses', 'broadcast_address', 'first_address', 'last_address']
+    list_display = [
+        "name",
+        "network",
+        "netmask",
+        "num_addresses",
+        "broadcast_address",
+        "first_address",
+        "last_address",
+    ]
     inlines = [DhcpOptionInline, DhcpCustomFieldInline, Ip4AddressInline]
 
     def num_addresses(self, ip4subnet):
@@ -157,10 +196,10 @@ class SubnetAdmin(admin.ModelAdmin):
         subnet = ipaddress.IPv4Network(ip4subnet.network + "/" + ip4subnet.netmask)
         return list(subnet.hosts())[-1]
 
-    broadcast_address.short_description = 'broadcast'
-    num_addresses.short_description = '#addresses'
-    first_address.short_description = 'first address'
-    last_address.short_description = 'last address'
+    broadcast_address.short_description = "broadcast"
+    num_addresses.short_description = "#addresses"
+    first_address.short_description = "first address"
+    last_address.short_description = "last address"
 
     def get_queryset(self, request):
         # TODO: optimize
@@ -193,12 +232,24 @@ class DomainAAAARecordInline(admin.TabularInline):
 
 
 class DomainAdmin(admin.ModelAdmin):
-    inlines = [DomainSrvRecordInline, DomainTxtRecordInline, DomainARecordInline, DomainAAAARecordInline,
-               DomainCnameRecordInline]
-    list_display = ['domain_name', 'domain_soa', 'domain_admin', 'num_records', 'domain_ipaddr',  'domain_ip6addr']
-    search_fields = ['domain_name']
+    inlines = [
+        DomainSrvRecordInline,
+        DomainTxtRecordInline,
+        DomainARecordInline,
+        DomainAAAARecordInline,
+        DomainCnameRecordInline,
+    ]
+    list_display = [
+        "domain_name",
+        "domain_soa",
+        "domain_admin",
+        "num_records",
+        "domain_ipaddr",
+        "domain_ip6addr",
+    ]
+    search_fields = ["domain_name"]
     formfield_overrides = {
-        models.IntegerField: {'widget': NumberInput(attrs={'style': 'width: 10em'})},
+        models.IntegerField: {"widget": NumberInput(attrs={"style": "width: 10em"})},
     }
 
     def num_records(self, domain):
@@ -207,19 +258,26 @@ class DomainAdmin(admin.ModelAdmin):
             "CNAME": domain.domaincnamerecord_set.count(),
             "SRV": domain.domainsrvrecord_set.count(),
             "TXT": domain.domaintxtrecord_set.count(),
-            "A": domain.domainarecord_set.count() + host_a_records
+            "A": domain.domainarecord_set.count() + host_a_records,
         }
-        return ', '.join(['{}: {}'.format(k, v) for k, v in size.items()])
+        return ", ".join(["{}: {}".format(k, v) for k, v in size.items()])
 
     num_records.short_description = "Num Records"
 
 
 class HostTypeAdmin(admin.ModelAdmin):
-    list_display = ['host_type', 'description', 'num_members']
+    list_display = ["host_type", "description", "num_members"]
 
 
 class OperatingSystemAdmin(admin.ModelAdmin):
-    list_display = ['name', 'version', 'arch', 'pxe_kernel', 'pxe_initrd', 'pxe_preseed_config_url']
+    list_display = [
+        "name",
+        "version",
+        "arch",
+        "pxe_kernel",
+        "pxe_initrd",
+        "pxe_preseed_config_url",
+    ]
 
 
 admin.site.register(Domain, DomainAdmin)
