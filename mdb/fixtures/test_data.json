@@ -34,7 +34,7 @@
         "domain_active_serial": 0,
         "domain_ip6addr": "::1",
         "domain_refresh": 28800,
-        "created_date": "2015-10-03T13:02:53.581",
+        "created_date": "2015-10-03T13:02:53.581Z",
         "domain_soa": "sega.neuf.no",
         "domain_admin": "sysadmin@neuf.no",
         "domain_minimum_ttl": 86400,
@@ -51,7 +51,7 @@
 {
     "fields": {
         "domain": 1,
-        "created_date": "2015-10-04T17:13:46.810",
+        "created_date": "2015-10-04T17:13:46.810Z",
         "name": "www",
         "target": "edb.technology."
     },
@@ -61,7 +61,7 @@
 {
     "fields": {
         "domain": 1,
-        "created_date": "2015-10-04T17:13:46.807",
+        "created_date": "2015-10-04T17:13:46.807Z",
         "name": "test",
         "target": "127.0.0.1"
     },
@@ -71,7 +71,7 @@
 {
     "fields": {
         "domain": 1,
-        "created_date": "2015-10-04T17:13:46.809",
+        "created_date": "2015-10-04T17:13:46.809Z",
         "name": "test",
         "target": "::1"
     },
@@ -103,7 +103,7 @@
         "netmask": 64,
         "domain_active_serial": 0,
         "domain_refresh": 28800,
-        "created_date": "2015-10-04T12:50:12.248",
+        "created_date": "2015-10-04T12:50:12.248Z",
         "domain_soa": "sega.neuf.no",
         "domain_admin": "sysadmin@neuf.no",
         "domain_minimum_ttl": 86400,
@@ -132,7 +132,7 @@
         "netmask": "255.255.255.0",
         "domain_active_serial": 0,
         "domain_refresh": 28800,
-        "created_date": "2015-10-03T13:08:17.765",
+        "created_date": "2015-10-03T13:08:17.765Z",
         "domain_soa": "sega.neuf.no",
         "domain_admin": "sysadmin@neuf.no",
         "domain_minimum_ttl": 86400,
@@ -2763,7 +2763,7 @@
         "pxe_installable": true,
         "kerberos_principal_created_date": null,
         "location": "kak",
-        "created_date": "2015-10-03T13:23:37.061",
+        "created_date": "2015-10-03T13:23:37.061Z",
         "owner": "edb",
         "serial_number": "12345678",
         "model": "OptiPlex 760",
@@ -2782,7 +2782,7 @@
         "host": 1,
         "macaddr": "f0:de:f1:58:be:1a",
         "ip4address": 2,
-        "created_date": "2015-10-03T13:23:37.063"
+        "created_date": "2015-10-03T13:23:37.063Z"
     },
     "model": "mdb.interface",
     "pk": 1
