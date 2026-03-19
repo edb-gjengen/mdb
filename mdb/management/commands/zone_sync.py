@@ -55,26 +55,25 @@ class Command(BaseCommand):
             service.sync_all_zones()
 
         if service.changes and not debug:
-            errors = "\n\n\n".join(
-                [v["errors"] for v in service.changes.values() if v["errors"]]
-            )
-            diffs = "\n\n\n".join(
-                [v["diff"] for v in service.changes.values() if v["diff"]]
-            )
-            zones = list(service.changes.keys())
-            self.reload_and_notify(service, errors, diffs, zones)
+            self.reload_and_notify(service, service.changes)
 
-    def reload_and_notify(self, service, errors, diffs, zones):
+    def reload_and_notify(self, service, changes):
         self.stdout.write("reloading zones... ")
         success, failed_command, output = service.run_reload_commands()
 
+        zones = list(changes.keys())
         zone_list = "\n".join("- " + z for z in zones)
 
         if not success:
             self.stdout.write("fail\n")
+            errors = "\n\n\n".join(
+                [v["errors"] for v in changes.values() if v["errors"]]
+            )
+            diffs = "\n\n\n".join([v["diff"] for v in changes.values() if v["diff"]])
             message = (
                 "Failed to reload zones, please inspect...\n\n"
-                "%s@%s$ %s\n%s\n%s" % (os.getlogin(), os.uname()[1], failed_command, output, zone_list)
+                "%s@%s$ %s\n%s\n%s"
+                % (os.getlogin(), os.uname()[1], failed_command, output, zone_list)
             )
             if errors:
                 message += "\n\n" + errors
@@ -86,11 +85,12 @@ class Command(BaseCommand):
             raise SystemExit(1)
 
         self.stdout.write("ok\n")
-        message = "Successfully updated bind zone files for\n" + zone_list
-        if errors:
-            message += "\n\n" + errors
-        discord.notify(
-            subject="✅ Success: bind",
-            message=message,
-            preformatted=diffs or None,
-        )
+        for zone, info in changes.items():
+            message = "Successfully updated bind zone file for `%s`" % zone
+            if info["errors"]:
+                message += "\n\n" + info["errors"]
+            discord.notify(
+                subject="✅ Success: bind",
+                message=message,
+                preformatted=info["diff"] or None,
+            )

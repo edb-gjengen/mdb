@@ -24,6 +24,7 @@ def make_service(changes=None):
 
 # --- run_reload_commands ---
 
+
 def test_run_reload_commands_calls_all_on_success(service):
     with patch("mdb.services.zone_sync.getstatusoutput", return_value=(0, "")) as mock:
         success, _, _ = service.run_reload_commands()
@@ -45,26 +46,34 @@ def test_run_reload_commands_stops_on_first_failure(service):
 
 # --- reload_and_notify ---
 
+
 def test_reload_and_notify_success_writes_ok(cmd):
     svc = make_service()
-    with patch("mdb.management.commands.zone_sync.discord") as mock_discord:
-        cmd.reload_and_notify(svc, errors="", diffs="diff", zones=["example.org"])
+    with patch("mdb.management.commands.zone_sync.discord"):
+        cmd.reload_and_notify(svc, svc.changes)
     assert "ok" in cmd.stdout.getvalue()
 
 
-def test_reload_and_notify_success_calls_discord(cmd):
-    svc = make_service()
+def test_reload_and_notify_success_calls_discord_once_per_zone(cmd):
+    changes = {
+        "example.org": {"errors": None, "diff": "- old\n+ new"},
+        "other.net": {"errors": None, "diff": "- x\n+ y"},
+    }
+    svc = make_service(changes=changes)
     with patch("mdb.management.commands.zone_sync.discord") as mock_discord:
-        cmd.reload_and_notify(svc, errors="", diffs="diff", zones=["example.org"])
-    mock_discord.notify.assert_called_once()
-    assert "✅" in mock_discord.notify.call_args.kwargs["subject"]
-    assert "- example.org" in mock_discord.notify.call_args.kwargs["message"]
+        cmd.reload_and_notify(svc, svc.changes)
+    assert mock_discord.notify.call_count == 2
+    subjects = [c.kwargs["subject"] for c in mock_discord.notify.call_args_list]
+    messages = [c.kwargs["message"] for c in mock_discord.notify.call_args_list]
+    assert all("✅" in s for s in subjects)
+    assert any("`example.org`" in m for m in messages)
+    assert any("`other.net`" in m for m in messages)
 
 
 def test_reload_and_notify_success_passes_diff_as_preformatted(cmd):
     svc = make_service()
     with patch("mdb.management.commands.zone_sync.discord") as mock_discord:
-        cmd.reload_and_notify(svc, errors="", diffs="- old\n+ new", zones=["example.org"])
+        cmd.reload_and_notify(svc, svc.changes)
     assert mock_discord.notify.call_args.kwargs["preformatted"] == "- old\n+ new"
 
 
@@ -74,7 +83,7 @@ def test_reload_and_notify_failure_writes_fail_and_exits(cmd):
     with patch("mdb.management.commands.zone_sync.discord"):
         with patch("os.getlogin", return_value="testuser"):
             with pytest.raises(SystemExit) as exc:
-                cmd.reload_and_notify(svc, errors="", diffs="", zones=["example.org"])
+                cmd.reload_and_notify(svc, svc.changes)
     assert exc.value.code == 1
     assert "fail" in cmd.stdout.getvalue()
 
@@ -85,7 +94,7 @@ def test_reload_and_notify_failure_discord_includes_command_and_output(cmd):
     with patch("mdb.management.commands.zone_sync.discord") as mock_discord:
         with patch("os.getlogin", return_value="testuser"):
             with pytest.raises(SystemExit):
-                cmd.reload_and_notify(svc, errors="", diffs="", zones=["example.org"])
+                cmd.reload_and_notify(svc, svc.changes)
     subject = mock_discord.notify.call_args.kwargs["subject"]
     message = mock_discord.notify.call_args.kwargs["message"]
     assert "⚠️" in subject
@@ -95,6 +104,7 @@ def test_reload_and_notify_failure_discord_includes_command_and_output(cmd):
 
 
 # --- handle ---
+
 
 @pytest.mark.django_db
 def test_handle_exits_if_zone_not_found(cmd):
