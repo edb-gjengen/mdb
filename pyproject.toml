@@ -5,28 +5,27 @@ description = "Machine Database - A Django app for managing computer equipment"
 authors = [
     { name = "EDB", email = "edb@neuf.no" },
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.14"
 license = "GPL-2.0-or-later"
 dependencies = [
-    "django>=5.2.1",
-    "django-auth-ldap>=5.2.0",
+    "django>=6.0.3",
+    "django-auth-ldap>=5.3.0",
     "django-extensions>=4.1",
-    "djangorestframework>=3.16.0",
-    "fabric>=2.7.1",
+    "djangorestframework>=3.17.0",
+    "fabric>=3.2.2",
     "freezegun>=1.5.5",
-    "gunicorn>=23.0.0",
+    "gunicorn>=25.1.0",
     "ipaddress>=1.0.23,<2.0.0",
-    "mysqlclient>=2.0.3,<3.0.0",
+    "mysqlclient>=2.2.8,<3.0.0",
     "requests>=2.32.5",
-    "sentry-sdk>=2.27.0",
+    "sentry-sdk>=2.55.0",
 ]
 
 [dependency-groups]
 dev = [
-    "fabric>=2.6.0,<3.0.0",
     "pytest>=9.0.2",
     "pytest-django>=4.12.0",
-    "ruff>=0.11.9,<1.0.0",
+    "ruff>=0.15.6,<1.0.0",
 ]
 
 [tool.pytest.ini_options]
