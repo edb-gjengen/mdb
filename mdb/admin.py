@@ -1,14 +1,33 @@
 import ipaddress
-from django.conf import settings
 
+from django.conf import settings
 from django.contrib import admin, messages
+from django.db import models
 from django.db.models import Count
+from django.forms import NumberInput
+
 from mdb.forms import InterfaceForm
 from mdb.models import (
-    Ip6Address, Interface, Ip4Address, DhcpOption, DhcpCustomField, DomainSrvRecord, DomainTxtRecord,
-    DomainCnameRecord, DomainARecord, Domain, Host, Ip4Subnet, Ip6Subnet, Nameserver, MailExchange, OperatingSystem,
-    HostType, DhcpConfig, DomainAAAARecord)
-
+    DhcpConfig,
+    DhcpCustomField,
+    DhcpOption,
+    Domain,
+    DomainAAAARecord,
+    DomainARecord,
+    DomainCnameRecord,
+    DomainSrvRecord,
+    DomainTxtRecord,
+    Host,
+    HostType,
+    Interface,
+    Ip4Address,
+    Ip4Subnet,
+    Ip6Address,
+    Ip6Subnet,
+    MailExchange,
+    Nameserver,
+    OperatingSystem,
+)
 
 admin.site.site_header = settings.ADMIN_SITE_NAME
 
@@ -178,6 +197,9 @@ class DomainAdmin(admin.ModelAdmin):
                DomainCnameRecordInline]
     list_display = ['domain_name', 'domain_soa', 'domain_admin', 'num_records', 'domain_ipaddr',  'domain_ip6addr']
     search_fields = ['domain_name']
+    formfield_overrides = {
+        models.IntegerField: {'widget': NumberInput(attrs={'style': 'width: 10em'})},
+    }
 
     def num_records(self, domain):
         host_a_records = Host.objects.filter(interface__domain=domain).count()
