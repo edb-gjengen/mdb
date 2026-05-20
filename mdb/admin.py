@@ -84,6 +84,7 @@ class HostAdmin(admin.ModelAdmin):
                     ("brand", "model"),
                     "serial_number",
                     ("operating_system", "virtual"),
+                    "allow_email",
                 )
             },
         ),

@@ -116,11 +116,15 @@ class Domain(models.Model):
                     host.hostname,
                     interface.ip4address.address,
                 )
+
             for ipv6addr in interface.ip6address_set.all():
                 content += "%-20s\tIN\tAAAA\t%s\n" % (
                     host.hostname,
                     ipv6addr.full_address(),
                 )
+
+            if host.allow_email:
+                content += f'{host.hostname}\tTXT\t"v=spf1 mx -all"\n'
 
         return content
 
@@ -508,6 +512,7 @@ class Host(models.Model):
     created_date = models.DateTimeField(auto_now_add=True)
     host_type = models.ForeignKey(HostType, models.CASCADE)  # FIXME: SET_NULL?
     virtual = models.BooleanField(default=False)
+    allow_email = models.BooleanField(default=False)
     operating_system = models.ForeignKey(
         OperatingSystem, models.CASCADE
     )  # FIXME: SET_NULL?
