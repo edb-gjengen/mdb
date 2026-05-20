@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 import pytest
 from freezegun import freeze_time
 
+from mdb.models import Host, HostType, Interface, OperatingSystem
 from mdb.services.zone_sync import ZoneSyncService
 
 EXPECTED_ZONE_FILE_CONTENTS = """\
@@ -183,3 +184,38 @@ def test_sync_zone_records_success_and_diff(db_domain, tmp_path):
     assert change["errors"] is None
     assert change["old_serial"] == 0
     assert change["new_serial"] == 2024010101
+
+
+def add_host(domain, hostname, allow_email):
+    host_type = HostType.objects.create(host_type="server", description="")
+    operating_system = OperatingSystem.objects.create(
+        name="Debian", version="12", arch="x86_64"
+    )
+    host = Host.objects.create(
+        hostname=hostname,
+        host_type=host_type,
+        operating_system=operating_system,
+        allow_email=allow_email,
+    )
+    Interface.objects.create(
+        name="eth0",
+        macaddr="00:11:22:33:44:55",
+        host=host,
+        domain=domain,
+    )
+    # Creating the interface bumps the domain serial via a signal; reload so the
+    # in-memory domain stays consistent with the DB.
+    domain.refresh_from_db()
+    return host
+
+
+def test_zone_file_contents_includes_spf_record_when_email_allowed(db_domain):
+    add_host(db_domain, "mailhost", allow_email=True)
+    content = db_domain.zone_file_contents()
+    assert 'mailhost\tTXT\t"v=spf1 mx -all"\n' in content
+
+
+def test_zone_file_contents_omits_spf_record_when_email_not_allowed(db_domain):
+    add_host(db_domain, "plainhost", allow_email=False)
+    content = db_domain.zone_file_contents()
+    assert "v=spf1 mx -all" not in content
