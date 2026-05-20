@@ -4,7 +4,14 @@ from unittest.mock import MagicMock
 import pytest
 from freezegun import freeze_time
 
-from mdb.models import Host, HostType, Interface, OperatingSystem
+from mdb.models import (
+    DhcpConfig,
+    Host,
+    HostType,
+    Interface,
+    Ip4Subnet,
+    OperatingSystem,
+)
 from mdb.services.zone_sync import ZoneSyncService
 
 EXPECTED_ZONE_FILE_CONTENTS = """\
@@ -186,7 +193,7 @@ def test_sync_zone_records_success_and_diff(db_domain, tmp_path):
     assert change["new_serial"] == 2024010101
 
 
-def add_host(domain, hostname, allow_email):
+def add_host(domain, hostname, allow_email, ip4address=None):
     host_type = HostType.objects.create(host_type="server", description="")
     operating_system = OperatingSystem.objects.create(
         name="Debian", version="12", arch="x86_64"
@@ -202,11 +209,27 @@ def add_host(domain, hostname, allow_email):
         macaddr="00:11:22:33:44:55",
         host=host,
         domain=domain,
+        ip4address=ip4address,
     )
     # Creating the interface bumps the domain serial via a signal; reload so the
     # in-memory domain stays consistent with the DB.
     domain.refresh_from_db()
     return host
+
+
+def make_ip4address():
+    """Create a tiny (/30) subnet; its post_save signal generates the host IPs."""
+    dhcp_config = DhcpConfig.objects.create(serial=1, active_serial=1)
+    subnet = Ip4Subnet.objects.create(
+        name="test-subnet",
+        netmask="255.255.255.252",
+        network="10.0.0.0",
+        domain_soa="ns1.example.org",
+        domain_admin="admin@example.org",
+        domain_filename="db.test-subnet",
+        dhcp_config=dhcp_config,
+    )
+    return subnet.ip4address_set.get(address="10.0.0.1")
 
 
 def test_zone_file_contents_includes_spf_record_when_email_allowed(db_domain):
@@ -219,3 +242,12 @@ def test_zone_file_contents_omits_spf_record_when_email_not_allowed(db_domain):
     add_host(db_domain, "plainhost", allow_email=False)
     content = db_domain.zone_file_contents()
     assert "v=spf1 mx -all" not in content
+
+
+def test_zone_file_contents_includes_ip4_in_spf_record_when_interface_has_address(
+    db_domain,
+):
+    address = make_ip4address()
+    add_host(db_domain, "mailhost", allow_email=True, ip4address=address)
+    content = db_domain.zone_file_contents()
+    assert f'mailhost\tTXT\t"v=spf1 mx ip4:{address.address} -all"\n' in content
