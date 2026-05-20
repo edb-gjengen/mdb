@@ -123,7 +123,9 @@ class Domain(models.Model):
                     ipv6addr.full_address(),
                 )
 
-            if host.allow_email:
+            if host.allow_email and interface.ip4address:
+                content += f'{host.hostname}\tTXT\t"v=spf1 mx ip4:{interface.ip4address.address} -all"\n'
+            elif host.allow_email:
                 content += f'{host.hostname}\tTXT\t"v=spf1 mx -all"\n'
 
         return content
