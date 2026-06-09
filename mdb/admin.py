@@ -70,8 +70,9 @@ class HostAdmin(admin.ModelAdmin):
         "in_domain",
         "pxe_installable",
         "ipv6_enabled",
+        "allow_email",
     ]
-    list_filter = ["host_type", "owner", "location", "pxe_installable"]
+    list_filter = ["host_type", "owner", "location", "pxe_installable", "allow_email"]
     readonly_fields = [
         "kerberos_principal_name",
         "kerberos_principal_created_date",
