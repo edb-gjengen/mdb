@@ -169,16 +169,18 @@ class DhcpCustomFieldInline(admin.TabularInline):
     extra = 0
 
 
-class SubnetAdmin(admin.ModelAdmin):
+class Ip4SubnetAdmin(admin.ModelAdmin):
     list_display = [
         "name",
         "network",
         "netmask",
+        "domain_name",
         "num_addresses",
         "broadcast_address",
         "first_address",
         "last_address",
     ]
+    readonly_fields = ["domain_name"]
     inlines = [DhcpOptionInline, DhcpCustomFieldInline, Ip4AddressInline]
 
     def num_addresses(self, ip4subnet):
@@ -198,13 +200,45 @@ class SubnetAdmin(admin.ModelAdmin):
         return list(subnet.hosts())[-1]
 
     broadcast_address.short_description = "broadcast"
-    num_addresses.short_description = "#addresses"
+    num_addresses.short_description = "# addresses"
     first_address.short_description = "first address"
     last_address.short_description = "last address"
 
     def get_queryset(self, request):
         # TODO: optimize
-        return super(SubnetAdmin, self).get_queryset(request)
+        return super(Ip4SubnetAdmin, self).get_queryset(request)
+
+
+class Ip6SubnetAdmin(admin.ModelAdmin):
+    list_display = [
+        "name",
+        "network",
+        "netmask",
+        "domain_name",
+        "num_addresses",
+        "first_address",
+        "last_address",
+    ]
+    readonly_fields = ["domain_name"]
+
+    def _network(self, ip6subnet):
+        return ipaddress.IPv6Network(
+            "%s::/%d" % (ip6subnet.network, ip6subnet.netmask), strict=False
+        )
+
+    def num_addresses(self, ip6subnet):
+        return self._network(ip6subnet).num_addresses
+
+    def first_address(self, ip6subnet):
+        return self._network(ip6subnet).network_address
+
+    def last_address(self, ip6subnet):
+        # subnet[-1] is O(1); never materialize hosts() for a /64.
+        return self._network(ip6subnet)[-1]
+
+    num_addresses.short_description = "# addresses"
+    first_address.short_description = "first address"
+    last_address.short_description = "last address"
 
 
 class DomainSrvRecordInline(admin.TabularInline):
@@ -283,8 +317,8 @@ class OperatingSystemAdmin(admin.ModelAdmin):
 
 admin.site.register(Domain, DomainAdmin)
 admin.site.register(Host, HostAdmin)
-admin.site.register(Ip4Subnet, SubnetAdmin)
-admin.site.register(Ip6Subnet)
+admin.site.register(Ip4Subnet, Ip4SubnetAdmin)
+admin.site.register(Ip6Subnet, Ip6SubnetAdmin)
 admin.site.register(Ip6Address)
 admin.site.register(Nameserver)
 admin.site.register(MailExchange)

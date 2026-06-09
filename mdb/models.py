@@ -299,6 +299,18 @@ class Ip6Subnet(models.Model):
     def __str__(self):
         return self.network + " (" + self.name + ")"
 
+    @property
+    def reverse_zone_name(self):
+        """The ip6.arpa reverse zone name for this subnet's prefix.
+
+        One label per nibble, derived from ``netmask`` (the prefix length).
+        Delegation in ip6.arpa happens on nibble (4-bit) boundaries, so the
+        prefix is truncated down to whole nibbles.
+        """
+        network = ipaddress.IPv6Address("%s::" % self.network)
+        nibbles = self.netmask // 4
+        return ".".join(network.exploded.replace(":", "")[:nibbles])[::-1] + ".ip6.arpa"
+
     def zone_file_contents(self, generate_unassigned=False):
         content = ""
         content += "; zone file for %s\n" % self.domain_name
@@ -378,6 +390,25 @@ class Ip4Subnet(models.Model):
 
     def __str__(self):
         return self.network + " (" + self.name + ")"
+
+    @property
+    def reverse_zone_name(self):
+        """The in-addr.arpa reverse zone name for this subnet.
+
+        Masks of /24 or shorter give the standard octet-boundary name
+        (190.36.158.in-addr.arpa).  Masks longer than /24 give the RFC 2317
+        classless name for the sub-/24 block (192-26.190.36.158.in-addr.arpa).
+        This is the apex BIND expects -- it must match the zone name in
+        named.conf or rndc refuses to load the file.
+        """
+        net = ipaddress.IPv4Network(
+            "%s/%s" % (self.network, self.netmask), strict=False
+        )
+        o1, o2, o3, o4 = str(net.network_address).split(".")
+        rev = "%s.%s.%s" % (o3, o2, o1)
+        if net.prefixlen > 24:
+            return "%s-%d.%s.in-addr.arpa" % (o4, net.prefixlen, rev)
+        return "%s.in-addr.arpa" % rev
 
     def zone_file_contents(self, generate_unassigned=False):
         content = ""

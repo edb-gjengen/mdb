@@ -34,9 +34,7 @@ def delete_ips_for_subnet(sender, instance, **kwargs):
 def set_domain_name_for_subnet(sender, instance, **kwargs):
     # we assume that the reverse domain_name does not change
     if len(instance.domain_name) == 0:
-        ipspl = instance.network.split(".")
-        rev = "%s.%s.%s" % (ipspl[2], ipspl[1], ipspl[0])
-        instance.domain_name = "%s.in-addr.arpa" % rev
+        instance.domain_name = instance.reverse_zone_name
 
     # update it's own serial
     # if instance.domain_serial is not None:
@@ -57,10 +55,7 @@ def set_domain_name_for_ipv6_subnet(sender, instance, **kwargs):
     if len(instance.domain_name) > 0:
         return
 
-    network = ipaddress.IPv6Address("%s::" % instance.network)
-    instance.domain_name = (
-        ".".join(network.exploded.replace(":", "")[:16])[::-1] + ".ip6.arpa"
-    )
+    instance.domain_name = instance.reverse_zone_name
 
 
 @receiver(post_save, sender=Interface)
