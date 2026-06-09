@@ -6,7 +6,7 @@ from django.db import models
 from django.db.models import Count
 from django.forms import NumberInput
 
-from mdb.forms import InterfaceForm
+from mdb.forms import InterfaceForm, SerialNumberInput
 from mdb.models import (
     DhcpConfig,
     DhcpCustomField,
@@ -30,6 +30,16 @@ from mdb.models import (
 )
 
 admin.site.site_header = settings.ADMIN_SITE_NAME
+
+
+class SerialFieldAdminMixin:
+    """Render the ``domain_serial`` field with the wide serial widget + button."""
+
+    def formfield_for_dbfield(self, db_field, request, **kwargs):
+        formfield = super().formfield_for_dbfield(db_field, request, **kwargs)
+        if db_field.name == "domain_serial":
+            formfield.widget = SerialNumberInput()
+        return formfield
 
 
 class Ip6AddressInline(admin.TabularInline):
@@ -169,7 +179,7 @@ class DhcpCustomFieldInline(admin.TabularInline):
     extra = 0
 
 
-class Ip4SubnetAdmin(admin.ModelAdmin):
+class Ip4SubnetAdmin(SerialFieldAdminMixin, admin.ModelAdmin):
     list_display = [
         "name",
         "network",
@@ -209,7 +219,7 @@ class Ip4SubnetAdmin(admin.ModelAdmin):
         return super(Ip4SubnetAdmin, self).get_queryset(request)
 
 
-class Ip6SubnetAdmin(admin.ModelAdmin):
+class Ip6SubnetAdmin(SerialFieldAdminMixin, admin.ModelAdmin):
     list_display = [
         "name",
         "network",
@@ -266,7 +276,7 @@ class DomainAAAARecordInline(admin.TabularInline):
     extra = 0
 
 
-class DomainAdmin(admin.ModelAdmin):
+class DomainAdmin(SerialFieldAdminMixin, admin.ModelAdmin):
     inlines = [
         DomainSrvRecordInline,
         DomainTxtRecordInline,
