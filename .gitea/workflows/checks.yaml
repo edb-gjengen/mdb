@@ -1,0 +1,37 @@
+name: checks
+
+# Checks only, nothing here deploys
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # bind9-utils provides named-checkzone, used by the zone sync tests.
+      - name: Install system dependencies
+        run: |
+          SUDO=$(command -v sudo || true)
+          $SUDO apt-get update
+          $SUDO apt-get install -y --no-install-recommends bind9-utils
+
+      - name: Install mise
+        run: |
+          curl -fsSL https://mise.run | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Install pinned tools
+        run: mise install
+
+      - name: Install Python dependencies
+        run: mise exec -- uv sync --locked --no-group prod
+
+      - name: Unit tests
+        run: mise exec -- uv run --no-sync pytest
