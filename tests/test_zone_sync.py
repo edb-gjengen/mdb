@@ -160,6 +160,27 @@ def test_check_zone_accepts_zone_file_contents(db_domain, service):
     assert output.endswith("OK")
 
 
+def test_read_serial_from_normalized_zone():
+    assert ZoneSyncService().read_serial(EXPECTED_NORMALIZED) == 2024010101
+
+
+def test_read_serial_from_generated_zone():
+    assert ZoneSyncService().read_serial(SAMPLE_ZONE) == 2024010101
+
+
+def test_read_serial_none_without_soa():
+    assert ZoneSyncService().read_serial("") is None
+
+
+def test_pending_zones_skips_synced_zones(db_domain, service):
+    assert service.pending_zones() == [db_domain]
+    db_domain.domain_active_serial = db_domain.domain_serial
+    db_domain.save()
+    assert service.pending_zones() == []
+    service.force = True
+    assert service.pending_zones() == [db_domain]
+
+
 def test_find_zone_returns_matching_domain(db_domain, service):
     assert service.find_zone("example.org") == db_domain
 
@@ -191,6 +212,35 @@ def test_sync_zone_records_success_and_diff(db_domain, tmp_path):
     assert change["errors"] is None
     assert change["old_serial"] == 0
     assert change["new_serial"] == 2024010101
+
+
+def test_sync_zone_raises_serial_past_live_zone(db_domain, tmp_path):
+    """Dynamic updates can leave the live serial above the one mdb generated."""
+    with open(db_domain.domain_filename, "w") as f:
+        f.write(EXPECTED_NORMALIZED.replace("2024010101", "2024010137"))
+    svc = ZoneSyncService(debug=False)
+    svc.checkzone_dir = str(tmp_path)
+
+    svc.sync_zone(db_domain)
+
+    db_domain.refresh_from_db()
+    assert db_domain.domain_serial == 2024010138
+    assert db_domain.domain_active_serial == 2024010138
+    assert svc.changes["example.org"]["new_serial"] == 2024010138
+    with open(db_domain.domain_filename) as f:
+        assert svc.read_serial(f.read()) == 2024010138
+
+
+def test_sync_zone_keeps_serial_above_live_zone(db_domain, tmp_path):
+    with open(db_domain.domain_filename, "w") as f:
+        f.write(EXPECTED_NORMALIZED.replace("2024010101", "2024010099"))
+    svc = ZoneSyncService(debug=False)
+    svc.checkzone_dir = str(tmp_path)
+
+    svc.sync_zone(db_domain)
+
+    db_domain.refresh_from_db()
+    assert db_domain.domain_serial == 2024010101
 
 
 def add_host(domain, hostname, allow_email, ip4address=None):

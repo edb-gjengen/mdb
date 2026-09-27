@@ -50,19 +50,45 @@ class Command(BaseCommand):
             if zone is None:
                 self.stderr.write("error: zone '%s' not found\n" % zone_name)
                 raise SystemExit(1)
-            service.sync_zone(zone)
+            zones = [zone]
         else:
-            service.sync_all_zones()
+            zones = service.pending_zones()
 
-        if service.changes and not debug:
-            self.reload_and_notify(service, service.changes)
+        if not zones:
+            return
+
+        if debug:
+            for zone in zones:
+                service.sync_zone(zone)
+            return
+
+        self.freeze(service, zones)
+        try:
+            for zone in zones:
+                service.sync_zone(zone)
+        except BaseException:
+            service.reload()
+            raise
+        self.reload_and_notify(service, service.changes)
+
+    def freeze(self, service, zones):
+        self.stdout.write("freezing zones... ")
+        success, failed_command, output = service.freeze()
+        if not success:
+            self.stdout.write("fail\n")
+            # A failed freeze may have frozen some zones before stopping.
+            service.run_commands([service.thaw_command])
+            self.notify_failure(
+                "Failed to freeze zones, nothing was written",
+                failed_command,
+                output,
+                [z.domain_name for z in zones],
+            )
+        self.stdout.write("ok\n")
 
     def reload_and_notify(self, service, changes):
         self.stdout.write("reloading zones... ")
-        success, failed_command, output = service.run_reload_commands()
-
-        zones = list(changes.keys())
-        zone_list = "\n".join("- " + z for z in zones)
+        success, failed_command, output = service.reload()
 
         if not success:
             self.stdout.write("fail\n")
@@ -70,19 +96,14 @@ class Command(BaseCommand):
                 [v["errors"] for v in changes.values() if v["errors"]]
             )
             diffs = "\n\n\n".join([v["diff"] for v in changes.values() if v["diff"]])
-            message = (
-                "Failed to reload zones, please inspect...\n\n"
-                "%s@%s$ %s\n%s\n%s"
-                % (os.getlogin(), os.uname()[1], failed_command, output, zone_list)
+            self.notify_failure(
+                "Failed to reload zones",
+                failed_command,
+                output,
+                list(changes.keys()),
+                errors,
+                diffs,
             )
-            if errors:
-                message += "\n\n" + errors
-            discord.notify(
-                subject="⚠️ FAIL: bind",
-                message=message,
-                preformatted=diffs or None,
-            )
-            raise SystemExit(1)
 
         self.stdout.write("ok\n")
         for zone, info in changes.items():
@@ -94,3 +115,24 @@ class Command(BaseCommand):
                 message=message,
                 preformatted=info["diff"] or None,
             )
+
+    def notify_failure(
+        self, summary, failed_command, output, zones, errors="", diffs=""
+    ):
+        zone_list = "\n".join("- " + z for z in zones)
+        message = "%s, please inspect...\n\n%s@%s$ %s\n%s\n%s" % (
+            summary,
+            os.getlogin(),
+            os.uname()[1],
+            failed_command,
+            output,
+            zone_list,
+        )
+        if errors:
+            message += "\n\n" + errors
+        discord.notify(
+            subject="⚠️ FAIL: bind",
+            message=message,
+            preformatted=diffs or None,
+        )
+        raise SystemExit(1)

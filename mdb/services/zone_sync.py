@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -11,10 +12,9 @@ from mdb.models import Domain, Ip4Subnet, Ip6Subnet
 
 class ZoneSyncService:
     rndc_bin = shutil.which("rndc") or "/usr/sbin/rndc"
-    reload_command = "%s reload" % rndc_bin
     freeze_command = "%s freeze" % rndc_bin
+    reload_command = "%s reload" % rndc_bin
     thaw_command = "%s thaw" % rndc_bin
-    commands_in_order = [freeze_command, reload_command, thaw_command]
     checkzone_bin = shutil.which("named-checkzone") or "/usr/sbin/named-checkzone"
     compilezone_bin = shutil.which("named-compilezone") or "/usr/sbin/named-compilezone"
     checkzone_dir = "/tmp/mdb-checkzone"
@@ -31,17 +31,29 @@ class ZoneSyncService:
                 print("ERROR: no such file %s, exiting..." % f)
                 sys.exit(1)
 
-    def run_reload_commands(self):
-        """Execute freeze/reload/thaw in order.
+    def run_commands(self, commands):
+        """Execute commands in order, stopping at the first failure.
 
         Returns (success, failed_command, output). On success, failed_command
         and output are empty strings.
         """
-        for command in self.commands_in_order:
+        for command in commands:
             status, output = getstatusoutput(command)
             if status != 0:
                 return False, command, output
         return True, "", ""
+
+    def freeze(self):
+        """Stop dynamic updates and flush each dynamic zone's journal to its file.
+
+        Must run before zone files are written: freeze dumps the zone BIND
+        holds in memory, which would overwrite a file written earlier.
+        """
+        return self.run_commands([self.freeze_command])
+
+    def reload(self):
+        """Load the written zone files and resume dynamic updates."""
+        return self.run_commands([self.reload_command, self.thaw_command])
 
     def find_zone(self, name):
         for model in (Domain, Ip4Subnet, Ip6Subnet):
@@ -51,17 +63,30 @@ class ZoneSyncService:
                 pass
         return None
 
-    def sync_all_zones(self):
-        for zone in chain(
-            Domain.objects.all(), Ip4Subnet.objects.all(), Ip6Subnet.objects.all()
-        ):
-            if zone.domain_serial == zone.domain_active_serial and not self.force:
-                continue
-            if self.sync_zone(zone):
-                self.changes[zone.domain_name]["success"] = True
+    def pending_zones(self):
+        return [
+            zone
+            for zone in chain(
+                Domain.objects.all(), Ip4Subnet.objects.all(), Ip6Subnet.objects.all()
+            )
+            if zone.domain_serial != zone.domain_active_serial or self.force
+        ]
 
     def sync_zone(self, zone):
         zonetype = getattr(zone._meta, "verbose_name", None) or zone._meta.model_name
+
+        try:
+            with open(zone.domain_filename, "r") as f:
+                old = f.read()
+        except IOError:
+            old = ""
+
+        # Dynamic updates (ACME dns-01 challenges) raise the serial in the
+        # frozen file past the one mdb generated. Secondaries ignore a zone
+        # whose serial does not increase.
+        live_serial = self.read_serial(old)
+        if live_serial is not None and live_serial >= zone.domain_serial:
+            zone.domain_serial = live_serial + 1
 
         self.changes[zone.domain_name] = {
             "old_serial": zone.domain_active_serial,
@@ -84,12 +109,6 @@ class ZoneSyncService:
         # Normalize to BIND's canonical format so the on-disk file and our
         # generated content always use the same format.
         new = self.normalize_zone(zone, zone.zone_file_contents())
-
-        try:
-            with open(zone.domain_filename, "r") as f:
-                old = f.read()
-        except IOError:
-            old = ""
 
         self.changes[zone.domain_name]["diff"] = self.calculate_diff(new, old, zone)
 
@@ -120,6 +139,11 @@ class ZoneSyncService:
         sys.stdout.write("ok\n")
         self.changes[zone.domain_name]["success"] = True
         return True
+
+    def read_serial(self, contents):
+        """Return the SOA serial of a zone file, or None if there is none."""
+        match = re.search(r"^\s*(\d+)\s*;\s*serial", contents, re.MULTILINE)
+        return int(match.group(1)) if match else None
 
     def normalize_zone(self, zone, contents):
         """Convert zone file contents to BIND's canonical format.
