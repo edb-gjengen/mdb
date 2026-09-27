@@ -4,7 +4,7 @@ A Django app for managing computer equipment.
 
 Install system dependencies:
 
-    sudo apt install libmysqlclient-dev python-dev libldap2-dev libsasl2-dev bind9-utils
+    sudo apt install python-dev libldap2-dev libsasl2-dev bind9-utils
 
 Use [mise](https://mise.jdx.dev/) to manage Python and uv:
 
