@@ -1,4 +1,5 @@
 import os
+import subprocess
 from unittest.mock import MagicMock
 
 import pytest
@@ -45,9 +46,12 @@ www IN AAAA 2001:db8::1
 ; HOST records
 """
 
+# named-compilezone output from BIND 9.18, which the DNS server runs.
+# BIND 9.20 writes fully qualified names instead of relative ones.
 EXPECTED_NORMALIZED = (
+    "$ORIGIN .\n"
     "$TTL 3600\t; 1 hour\n"
-    "example.org.\t\tIN SOA\tns1.example.org. admin.example.org. (\n"
+    "example.org\t\tIN SOA\tns1.example.org. admin.example.org. (\n"
     "\t\t\t\t2024010101 ; serial\n"
     "\t\t\t\t28800      ; refresh (8 hours)\n"
     "\t\t\t\t7200       ; retry (2 hours)\n"
@@ -60,11 +64,12 @@ EXPECTED_NORMALIZED = (
     "\t\t\tMX\t10 mail.example.org.\n"
     '\t\t\tTXT\t"v=spf1 mx ~all"\n'
     "\t\t\tAAAA\t2001:db8::1\n"
-    "ftp.example.org.\tCNAME\twww.example.org.\n"
-    "mail.example.org.\tA\t9.10.11.12\n"
-    "ns1.example.org.\tA\t1.2.3.4\n"
-    "ns2.example.org.\tA\t5.6.7.8\n"
-    "www.example.org.\tA\t1.2.3.4\n"
+    "$ORIGIN example.org.\n"
+    "ftp\t\t\tCNAME\twww\n"
+    "mail\t\t\tA\t9.10.11.12\n"
+    "ns1\t\t\tA\t1.2.3.4\n"
+    "ns2\t\t\tA\t5.6.7.8\n"
+    "www\t\t\tA\t1.2.3.4\n"
     "\t\t\tAAAA\t2001:db8::1"
 )
 
@@ -147,6 +152,20 @@ def test_zone_file_contents_includes_all_record_types(db_domain):
     )
 
 
+def bind_version():
+    try:
+        out = subprocess.run(
+            [ZoneSyncService.compilezone_bin, "-v"], capture_output=True, text=True
+        ).stdout
+    except OSError:
+        return None
+    return out.strip()
+
+
+@pytest.mark.skipif(
+    not (bind_version() or "").startswith("9.18."),
+    reason="expected output is from BIND 9.18, which the DNS server runs",
+)
 def test_zone_file_contents_normalizes_without_error(db_domain, service):
     normalized = service.normalize_zone(db_domain, db_domain.zone_file_contents())
     assert normalized == EXPECTED_NORMALIZED
