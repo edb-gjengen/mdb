@@ -115,7 +115,7 @@ def test_restart_and_notify_success_passes_diff_as_preformatted(cmd):
 def test_restart_and_notify_failure_writes_fail_and_exits(cmd):
     svc, config = make_service(restart_success=False, restart_output="Job failed")
     with patch("mdb.management.commands.dhcp_sync.discord"):
-        with patch("os.getlogin", return_value="testuser"):
+        with patch("getpass.getuser", return_value="testuser"):
             with pytest.raises(SystemExit) as exc:
                 cmd.restart_and_notify(svc, config, old_serial=1, diff="")
     assert exc.value.code == 1
@@ -125,7 +125,7 @@ def test_restart_and_notify_failure_writes_fail_and_exits(cmd):
 def test_restart_and_notify_failure_discord_includes_command_and_output(cmd):
     svc, config = make_service(restart_success=False, restart_output="Job failed")
     with patch("mdb.management.commands.dhcp_sync.discord") as mock_discord:
-        with patch("os.getlogin", return_value="testuser"):
+        with patch("getpass.getuser", return_value="testuser"):
             with pytest.raises(SystemExit):
                 cmd.restart_and_notify(svc, config, old_serial=1, diff="")
     subject = mock_discord.notify.call_args.kwargs["subject"]

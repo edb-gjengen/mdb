@@ -1,3 +1,4 @@
+import getpass
 import os
 
 from django.core.management.base import BaseCommand
@@ -120,7 +121,7 @@ class Command(BaseCommand):
         self, summary, failed_command, output, zones, errors="", diffs=""
     ):
         zone_list = "\n".join("- " + z for z in zones)
-        message = f"{summary}, please inspect...\n\n{os.getlogin()}@{os.uname()[1]}$ {failed_command}\n{output}\n{zone_list}"
+        message = f"{summary}, please inspect...\n\n{getpass.getuser()}@{os.uname()[1]}$ {failed_command}\n{output}\n{zone_list}"
         if errors:
             message += "\n\n" + errors
         discord.notify(

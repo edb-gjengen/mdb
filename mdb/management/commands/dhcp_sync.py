@@ -1,3 +1,4 @@
+import getpass
 import os
 
 from django.core.management.base import BaseCommand
@@ -64,7 +65,7 @@ class Command(BaseCommand):
             self.stdout.write("fail\n")
             message = (
                 "Failed to restart isc-dhcp-server, please inspect...\n\n"
-                f"{os.getlogin()}@{os.uname()[1]}$ {service.restart_command}\n{output}"
+                f"{getpass.getuser()}@{os.uname()[1]}$ {service.restart_command}\n{output}"
             )
             discord.notify(
                 subject=f"⚠️ FAIL: dhcpd {old_serial} -> {config.active_serial}",

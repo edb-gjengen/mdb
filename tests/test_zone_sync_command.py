@@ -99,7 +99,7 @@ def test_reload_and_notify_failure_writes_fail_and_exits(cmd):
     svc = make_service()
     svc.reload.return_value = (False, "/usr/sbin/rndc reload", "timed out")
     with patch("mdb.management.commands.zone_sync.discord"):
-        with patch("os.getlogin", return_value="testuser"):
+        with patch("getpass.getuser", return_value="testuser"):
             with pytest.raises(SystemExit) as exc:
                 cmd.reload_and_notify(svc, svc.changes)
     assert exc.value.code == 1
@@ -110,7 +110,7 @@ def test_reload_and_notify_failure_discord_includes_command_and_output(cmd):
     svc = make_service()
     svc.reload.return_value = (False, "/usr/sbin/rndc reload", "timed out")
     with patch("mdb.management.commands.zone_sync.discord") as mock_discord:
-        with patch("os.getlogin", return_value="testuser"):
+        with patch("getpass.getuser", return_value="testuser"):
             with pytest.raises(SystemExit):
                 cmd.reload_and_notify(svc, svc.changes)
     subject = mock_discord.notify.call_args.kwargs["subject"]
@@ -187,7 +187,7 @@ def test_handle_writes_nothing_when_freeze_fails(cmd, db_domain):
         ),
         patch.object(ZoneSyncService, "run_commands") as mock_run,
         patch("mdb.management.commands.zone_sync.discord") as mock_discord,
-        patch("os.getlogin", return_value="testuser"),
+        patch("getpass.getuser", return_value="testuser"),
         pytest.raises(SystemExit),
     ):
         cmd.handle(debug=False, force=False, zone=None)
