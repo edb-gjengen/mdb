@@ -1,6 +1,7 @@
 [tools]
 python = "3.14"
 uv = "latest"
+prek = "latest" # git hooks, see prek.toml
 
 [env]
 # settings.py leaves DEBUG off unless this says otherwise.
