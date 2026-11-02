@@ -3,7 +3,7 @@
 
 [[repos]]
 repo = "https://github.com/astral-sh/ruff-pre-commit"
-rev = "v0.15.6" # keep in sync with ruff in uv.lock
+rev = "v0.17.3" # keep in sync with ruff in uv.lock
 hooks = [
     { id = "ruff-check", args = ["--fix"] },
     { id = "ruff-format" },
@@ -12,7 +12,7 @@ hooks = [
 [[repos]]
 repo = "https://github.com/adamchainz/django-upgrade"
 rev = "1.33.0"
-hooks = [{ id = "django-upgrade", args = ["--target-version", "6.0"] }]
+hooks = [{ id = "django-upgrade", args = ["--target-version", "6.1"] }]
 
 [[repos]]
 repo = "https://github.com/pre-commit/pre-commit-hooks"

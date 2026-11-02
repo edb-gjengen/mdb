@@ -5,16 +5,15 @@ description = "Machine Database - A Django app for managing computer equipment"
 authors = [
     { name = "EDB", email = "edb@neuf.no" },
 ]
-requires-python = ">=3.14"
+requires-python = ">=3.14,<3.15"
 license = "GPL-2.0-or-later"
 dependencies = [
-    "django>=6.0.3",
+    "django>=6.1.2",
     "django-extensions>=4.1",
-    "djangorestframework>=3.17.0",
-    "gunicorn>=25.1.0",
-    "ipaddress>=1.0.23,<2.0.0",
-    "requests>=2.32.5",
-    "sentry-sdk>=2.55.0",
+    "djangorestframework>=3.18.3",
+    "gunicorn>=26.2.0",
+    "requests>=2.34.2",
+    "sentry-sdk>=2.73.0",
     "whitenoise>=6.12,<7",
 ]
 
@@ -22,13 +21,13 @@ dependencies = [
 # Only needed on the server (LDAP is configured in production's settings).
 # Kept separate so CI can skip building python-ldap from source.
 prod = [
-    "django-auth-ldap>=5.3.0",
+    "django-auth-ldap>=5.4.0",
 ]
 dev = [
     "freezegun>=1.5.5",
-    "pytest>=9.0.2",
-    "pytest-django>=4.12.0",
-    "ruff>=0.15.6,<1.0.0",
+    "pytest>=9.2.0",
+    "pytest-django>=4.14.0",
+    "ruff>=0.17.3,<1.0.0",
 ]
 
 [tool.uv]
