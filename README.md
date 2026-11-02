@@ -28,8 +28,8 @@ Run migrations and start the development server:
 MDB runs on sega under edb-infra's `mdb` role (`roles/mdb.md` there): gunicorn from a
 release directory per commit, its settings in the file `MDB_SETTINGS` names
 (`/etc/mdb/settings.py`), which `mdbsite/settings.py` executes last. A push to `main` that
-passes the checks deploys itself while the repository variable `DEPLOY_SEGA` is `true`
-(`.gitea/workflows/deploy.yaml`). The DNS and DHCP sync runs as root on sega:
+passes the tests and prek deploys itself while the repository variable `DEPLOY_SEGA` is `true`
+(`.gitea/workflows/ci.yaml`). The DNS and DHCP sync runs as root on sega:
 `sudo mdb-sync`.
 
 ## Development tasks

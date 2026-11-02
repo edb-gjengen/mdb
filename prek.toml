@@ -1,5 +1,5 @@
 # Git hooks, run by prek (https://prek.j178.dev). `prek install` once per clone; CI runs
-# them all (.gitea/workflows/prek.yaml).
+# them all (.gitea/workflows/ci.yaml).
 
 [[repos]]
 repo = "https://github.com/astral-sh/ruff-pre-commit"
