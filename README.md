@@ -20,6 +20,18 @@ Run migrations and start the development server:
     uv run python manage.py migrate
     uv run python manage.py runserver
 
+`mise.toml` sets `DJANGO_DEBUG=1`; without it `DEBUG` is off. Local overrides go in
+`mdbsite/local_settings.py`.
+
+## Production
+
+MDB runs on sega under edb-infra's `mdb` role (`roles/mdb.md` there): gunicorn from a
+release directory per commit, its settings in the file `MDB_SETTINGS` names
+(`/etc/mdb/settings.py`), which `mdbsite/settings.py` executes last. A push to `main` that
+passes the checks deploys itself while the repository variable `DEPLOY_SEGA` is `true`
+(`.gitea/workflows/deploy.yaml`). The DNS and DHCP sync runs as root on sega:
+`sudo mdb-sync`.
+
 ## Development tasks
 
 Dump test data:

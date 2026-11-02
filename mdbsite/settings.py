@@ -2,9 +2,10 @@ import os
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
-DEBUG = os.getenv("DJANGO_DEBUG", True)
+# Off unless DJANGO_DEBUG says otherwise; mise.toml turns it on for development.
+DEBUG = os.getenv("DJANGO_DEBUG", "").lower() in ("1", "true", "yes")
 
-ADMINS = (("System Administrator", "sysadmin@example.com"),)
+ADMINS = ("sysadmin@example.com",)
 
 MANAGERS = ADMINS
 
@@ -35,10 +36,12 @@ STATICFILES_FINDERS = (
     "django.contrib.staticfiles.finders.AppDirectoriesFinder",
 )
 
-# Make this unique, and don't share it with anybody.
+# For development only: the repository is public. Production sets its own (MDB_SETTINGS).
 SECRET_KEY = "@4ps=ebofcpv8sb#y7gm896=l&l*u0u-pgo7bcdj%+(k+2lqnl"
 
 MIDDLEWARE = (
+    # Serves STATIC_ROOT, so production needs nothing in front but a proxy.
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -132,7 +135,16 @@ SENTRY_ENVIRONMENT = os.getenv("SENTRY_ENVIRONENT", "dev")
 
 ADMIN_SITE_NAME = "MDB"
 
-try:
-    from .local_settings import *
-except ImportError:
-    pass
+# Production's settings live outside the code, in the file MDB_SETTINGS names; the mdb role
+# in edb-infra writes it. An error in it stops MDB rather than leaving the defaults above.
+if os.getenv("MDB_SETTINGS"):
+    with open(os.environ["MDB_SETTINGS"]) as f:
+        exec(compile(f.read(), os.environ["MDB_SETTINGS"], "exec"))
+else:
+    # Development. Only a missing local_settings is skipped: a local_settings whose own
+    # imports fail must not leave MDB running on the defaults.
+    try:
+        from .local_settings import *  # noqa: F403
+    except ModuleNotFoundError as e:
+        if e.name != "mdbsite.local_settings":
+            raise

@@ -1,3 +1,7 @@
 [tools]
 python = "3.14"
 uv = "latest"
+
+[env]
+# settings.py leaves DEBUG off unless this says otherwise.
+DJANGO_DEBUG = "1"
