@@ -54,7 +54,7 @@ class InterfaceInline(admin.TabularInline):
     form = InterfaceForm
 
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related()
+        return super().get_queryset(request).select_related("host", "domain")
 
 
 @admin.register(Host)
@@ -153,7 +153,11 @@ class HostAdmin(admin.ModelAdmin):
             )
 
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related()
+        return (
+            super()
+            .get_queryset(request)
+            .select_related("host_type", "operating_system")
+        )
 
 
 class Ip4AddressInline(admin.TabularInline):
