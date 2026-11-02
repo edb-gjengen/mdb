@@ -26,7 +26,6 @@ DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 MEDIA_URL = "/media/"
-ADMIN_MEDIA_PREFIX = "/media/"
 
 # Static
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
@@ -122,7 +121,6 @@ LOGGING = {
 # REST Framework
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
-    "PAGINATE_BY": 10,
 }
 
 # PXE
@@ -133,7 +131,7 @@ MDB_PXE_PRESEED_URL = "http://158.36.190.194/ubuntu/preseed_1404.cfg"
 
 # Sentry
 SENTRY_DSN = os.getenv("SENTRY_DSN")
-SENTRY_ENVIRONMENT = os.getenv("SENTRY_ENVIRONENT", "dev")
+SENTRY_ENVIRONMENT = os.getenv("SENTRY_ENVIRONMENT", "dev")
 
 ADMIN_SITE_NAME = "MDB"
 
