@@ -36,7 +36,7 @@ def get_pxe_filename(interface, filename_format="mac_addr"):
     Mac or IP address based PXE filename
     Ref: http://www.syslinux.org/wiki/index.php/PXELINUX#Examples
     """
-    ip_addr_in_hex = f"{int(ipaddress.IPv4Address(interface.ip4address.address)):02X}"
+    ip_addr_in_hex = f"{int(ipaddress.IPv4Address(interface.ip4address.address)):08X}"
     formats = {
         "ip_addr": ip_addr_in_hex,
         "mac_addr": "01-{}".format(interface.macaddr.lower().replace(":", "-")),
