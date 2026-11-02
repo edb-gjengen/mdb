@@ -1,4 +1,5 @@
 import os
+import signal
 from io import StringIO
 from unittest.mock import MagicMock, patch
 
@@ -6,6 +7,13 @@ import pytest
 
 from mdb.management.commands.zone_sync import Command as CommandClass
 from mdb.services.zone_sync import ZoneSyncService
+
+
+@pytest.fixture(autouse=True)
+def checkzone_dir(tmp_path, monkeypatch):
+    """Where the frozen marker lives; not the real /tmp/mdb-checkzone."""
+    monkeypatch.setattr(ZoneSyncService, "checkzone_dir", str(tmp_path))
+    return tmp_path
 
 
 @pytest.fixture
@@ -185,7 +193,7 @@ def test_handle_writes_nothing_when_freeze_fails(cmd, db_domain):
         patch.object(
             ZoneSyncService, "freeze", return_value=(False, "rndc freeze", "no")
         ),
-        patch.object(ZoneSyncService, "run_commands") as mock_run,
+        patch.object(ZoneSyncService, "thaw", return_value=(True, "", "")) as thaw,
         patch("mdb.management.commands.zone_sync.discord") as mock_discord,
         patch("getpass.getuser", return_value="testuser"),
         pytest.raises(SystemExit),
@@ -193,7 +201,7 @@ def test_handle_writes_nothing_when_freeze_fails(cmd, db_domain):
         cmd.handle(debug=False, force=False, zone=None)
 
     assert not os.path.exists(db_domain.domain_filename)
-    mock_run.assert_called_once_with([ZoneSyncService.thaw_command])
+    thaw.assert_called_once()
     assert "- example.org" in mock_discord.notify.call_args.kwargs["message"]
 
 
@@ -201,10 +209,161 @@ def test_handle_writes_nothing_when_freeze_fails(cmd, db_domain):
 def test_handle_thaws_when_sync_raises(cmd, db_domain):
     with (
         patch.object(ZoneSyncService, "freeze", return_value=(True, "", "")),
-        patch.object(ZoneSyncService, "reload") as mock_reload,
+        patch.object(
+            ZoneSyncService, "reload", return_value=(True, "", "")
+        ) as mock_reload,
         patch.object(ZoneSyncService, "sync_zone", side_effect=RuntimeError),
+        patch("mdb.management.commands.zone_sync.discord"),
         pytest.raises(RuntimeError),
     ):
         cmd.handle(debug=False, force=False, zone=None)
 
     mock_reload.assert_called_once()
+
+
+# --- stopped and killed syncs ---
+
+
+def rndc(results=None):
+    """Patch rndc: every command succeeds unless results maps it to (status, output)."""
+    results = results or {}
+    calls = []
+
+    def run(command):
+        calls.append(command.rsplit(" ", 1)[-1])
+        return results.get(command, (0, ""))
+
+    return calls, patch("mdb.services.zone_sync.getstatusoutput", side_effect=run)
+
+
+def test_reload_thaws_even_when_reload_fails(service):
+    calls, rndc_patch = rndc({ZoneSyncService.reload_command: (1, "timed out")})
+    with rndc_patch:
+        success, failed_command, output = service.reload()
+    assert calls == ["reload", "thaw"]
+    assert (success, failed_command, output) == (
+        False,
+        ZoneSyncService.reload_command,
+        "timed out",
+    )
+
+
+def test_marker_exists_only_while_frozen(service):
+    calls, rndc_patch = rndc()
+    with rndc_patch:
+        service.freeze()
+        assert service.frozen_since() is not None
+        service.reload()
+    assert service.frozen_since() is None
+
+
+def test_marker_stays_when_thaw_fails(service):
+    calls, rndc_patch = rndc({ZoneSyncService.thaw_command: (1, "no")})
+    with rndc_patch:
+        service.freeze()
+        service.reload()
+    assert service.frozen_since() is not None
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("signum", [signal.SIGHUP, signal.SIGTERM, signal.SIGINT])
+def test_handle_thaws_and_warns_when_stopped_by_signal(cmd, db_domain, signum):
+    def killed(zone):
+        os.kill(os.getpid(), signum)
+
+    calls, rndc_patch = rndc()
+    previous = signal.getsignal(signum)
+    with (
+        rndc_patch,
+        patch.object(ZoneSyncService, "sync_zone", side_effect=killed),
+        patch("mdb.management.commands.zone_sync.discord") as mock_discord,
+        pytest.raises(SystemExit) as exc,
+    ):
+        cmd.handle(debug=False, force=False, zone=None)
+
+    assert exc.value.code == 128 + signum
+    assert calls == ["freeze", "reload", "thaw"]
+    assert ZoneSyncService().frozen_since() is None
+    kwargs = mock_discord.notify.call_args.kwargs
+    assert kwargs["subject"] == "⚠️ Zone sync interrupted, zones thawed"
+    assert signal.Signals(signum).name in kwargs["message"]
+    assert "Not written, run mdb-sync again:\n- example.org" in kwargs["message"]
+    assert signal.getsignal(signum) == previous
+
+
+@pytest.mark.django_db
+def test_handle_ignores_signals_while_rndc_runs(cmd, db_domain):
+    seen = []
+
+    def run(commands):
+        seen.append((commands, signal.getsignal(signal.SIGHUP)))
+        return True, "", ""
+
+    with (
+        patch.object(ZoneSyncService, "run_commands", side_effect=run),
+        patch("mdb.management.commands.zone_sync.discord"),
+    ):
+        cmd.handle(debug=False, force=False, zone=None)
+
+    # Signals still stop named-checkzone and the writes, between freeze and reload.
+    assert seen == [
+        ([ZoneSyncService.freeze_command], signal.SIG_IGN),
+        ([ZoneSyncService.reload_command], signal.SIG_IGN),
+        ([ZoneSyncService.thaw_command], signal.SIG_IGN),
+    ]
+
+
+@pytest.mark.django_db
+def test_handle_warns_when_reload_after_signal_fails(cmd, db_domain):
+    calls, rndc_patch = rndc({ZoneSyncService.thaw_command: (1, "no")})
+    with (
+        rndc_patch,
+        patch.object(
+            ZoneSyncService,
+            "sync_zone",
+            side_effect=lambda zone: os.kill(os.getpid(), signal.SIGHUP),
+        ),
+        patch("mdb.management.commands.zone_sync.discord") as mock_discord,
+        patch("getpass.getuser", return_value="testuser"),
+        pytest.raises(SystemExit),
+    ):
+        cmd.handle(debug=False, force=False, zone=None)
+
+    kwargs = mock_discord.notify.call_args.kwargs
+    assert kwargs["subject"] == "⚠️ FAIL: bind"
+    assert "may still be frozen" in kwargs["message"]
+    assert ZoneSyncService().frozen_since() is not None
+
+
+@pytest.mark.django_db
+def test_handle_thaws_zones_a_killed_sync_left_frozen(cmd, checkzone_dir):
+    (checkzone_dir / "zones-frozen").write_text("1234\n")
+    calls, rndc_patch = rndc()
+    with (
+        rndc_patch,
+        patch("mdb.management.commands.zone_sync.discord") as mock_discord,
+    ):
+        cmd.handle(debug=False, force=False, zone=None)
+
+    assert calls == ["reload", "thaw"]
+    assert ZoneSyncService().frozen_since() is None
+    kwargs = mock_discord.notify.call_args.kwargs
+    assert kwargs["subject"] == "⚠️ Zones thawed after a killed zone sync"
+    assert "left every zone frozen" in kwargs["message"]
+
+
+@pytest.mark.django_db
+def test_handle_stops_when_thawing_a_killed_sync_fails(cmd, db_domain, checkzone_dir):
+    (checkzone_dir / "zones-frozen").write_text("1234\n")
+    calls, rndc_patch = rndc({ZoneSyncService.reload_command: (1, "no")})
+    with (
+        rndc_patch,
+        patch("mdb.management.commands.zone_sync.discord") as mock_discord,
+        patch("getpass.getuser", return_value="testuser"),
+        pytest.raises(SystemExit),
+    ):
+        cmd.handle(debug=False, force=False, zone=None)
+
+    assert calls == ["reload", "thaw"]  # nothing frozen again, nothing written
+    assert not os.path.exists(db_domain.domain_filename)
+    assert "thawing them failed" in mock_discord.notify.call_args.kwargs["message"]

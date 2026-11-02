@@ -1,10 +1,29 @@
 import getpass
 import os
+import signal
 
 from django.core.management.base import BaseCommand
 
 from mdb.services import discord
 from mdb.services.zone_sync import ZoneSyncService
+
+# What stops a sync run by hand: a dropped ssh session, a kill, Ctrl-C.
+STOPPING_SIGNALS = (signal.SIGHUP, signal.SIGTERM, signal.SIGINT)
+
+
+class Interrupted(Exception):
+    def __init__(self, signum):
+        self.signum = signum
+        super().__init__(signal.Signals(signum).name)
+
+
+def raise_interrupted(signum, frame):
+    raise Interrupted(signum)
+
+
+def set_handlers(handler):
+    for signum in STOPPING_SIGNALS:
+        signal.signal(signum, handler)
 
 
 class Command(BaseCommand):
@@ -46,6 +65,9 @@ class Command(BaseCommand):
         os.path.isdir(service.checkzone_dir) or os.mkdir(service.checkzone_dir)
         debug and (os.path.isdir(service.debug_dir) or os.mkdir(service.debug_dir))
 
+        if not debug:
+            self.thaw_after_killed_sync(service)
+
         if zone_name:
             zone = service.find_zone(zone_name)
             if zone is None:
@@ -63,14 +85,75 @@ class Command(BaseCommand):
                 service.sync_zone(zone)
             return
 
-        self.freeze(service, zones)
+        previous = {signum: signal.getsignal(signum) for signum in STOPPING_SIGNALS}
         try:
-            for zone in zones:
-                service.sync_zone(zone)
-        except BaseException:
-            service.reload()
-            raise
-        self.reload_and_notify(service, service.changes)
+            # From the freeze to the thaw, a signal must not stop the sync in between:
+            # ignored while rndc runs, it stops the writes for a reload and thaw.
+            set_handlers(signal.SIG_IGN)
+            self.freeze(service, zones)
+            set_handlers(raise_interrupted)
+            try:
+                for zone in zones:
+                    service.sync_zone(zone)
+            except BaseException as e:
+                set_handlers(signal.SIG_IGN)
+                self.reload_after_interruption(service, zones, e)
+                if isinstance(e, Interrupted):
+                    raise SystemExit(128 + e.signum) from e
+                raise
+            set_handlers(signal.SIG_IGN)
+            self.reload_and_notify(service, service.changes)
+        finally:
+            for signum, handler in previous.items():
+                signal.signal(signum, handler)
+
+    def thaw_after_killed_sync(self, service):
+        since = service.frozen_since()
+        if since is None:
+            return
+
+        self.stdout.write("a previous sync left the zones frozen, thawing... ")
+        summary = (
+            f"A zone sync killed after {since:%Y-%m-%d %H:%M} left every zone frozen"
+        )
+        success, failed_command, output = service.reload()
+        if not success:
+            self.stdout.write("fail\n")
+            self.notify_failure(
+                f"{summary}, and thawing them failed", failed_command, output, []
+            )
+        self.stdout.write("ok\n")
+        discord.notify(
+            subject="⚠️ Zones thawed after a killed zone sync",
+            message=f"{summary}, refusing dynamic updates until now. "
+            "They are reloaded and thawed.",
+        )
+
+    def reload_after_interruption(self, service, zones, error):
+        reason = str(error) if isinstance(error, Interrupted) else repr(error)
+        written = [z for z, c in service.changes.items() if c["success"]]
+        not_written = [z.domain_name for z in zones if z.domain_name not in written]
+
+        self.stdout.write(f"stopped by {reason}, reloading zones... ")
+        success, failed_command, output = service.reload()
+        if not success:
+            self.stdout.write("fail\n")
+            self.notify_failure(
+                f"Zone sync stopped by {reason}, and reloading the zones failed; "
+                "they may still be frozen",
+                failed_command,
+                output,
+                not_written,
+            )
+        self.stdout.write("ok\n")
+        message = f"Zone sync stopped by {reason}. The zones are reloaded and thawed."
+        if written:
+            message += "\n\nWritten:\n" + "\n".join("- " + z for z in written)
+        if not_written:
+            message += "\n\nNot written, run mdb-sync again:\n" + "\n".join(
+                "- " + z for z in not_written
+            )
+        discord.notify(subject="⚠️ Zone sync interrupted, zones thawed", message=message)
 
     def freeze(self, service, zones):
         self.stdout.write("freezing zones... ")
@@ -78,7 +161,7 @@ class Command(BaseCommand):
         if not success:
             self.stdout.write("fail\n")
             # A failed freeze may have frozen some zones before stopping.
-            service.run_commands([service.thaw_command])
+            service.thaw()
             self.notify_failure(
                 "Failed to freeze zones, nothing was written",
                 failed_command,

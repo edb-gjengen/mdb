@@ -4,6 +4,7 @@ import shutil
 import stat
 import sys
 import tempfile
+from datetime import datetime
 from difflib import context_diff
 from itertools import chain
 from subprocess import getstatusoutput
@@ -44,17 +45,50 @@ class ZoneSyncService:
                 return False, command, output
         return True, "", ""
 
+    @property
+    def frozen_marker(self):
+        """Exists from just before rndc freeze until the zones are thawed.
+
+        A sync killed in between (SIGKILL, the OOM killer) leaves it behind, and the
+        next sync thaws the zones it finds frozen.
+        """
+        return os.path.join(self.checkzone_dir, "zones-frozen")
+
+    def frozen_since(self):
+        """When a sync that never thawed froze the zones, or None."""
+        try:
+            return datetime.fromtimestamp(os.path.getmtime(self.frozen_marker))
+        except FileNotFoundError:
+            return None
+
     def freeze(self):
         """Stop dynamic updates and flush each dynamic zone's journal to its file.
 
         Must run before zone files are written: freeze dumps the zone BIND
         holds in memory, which would overwrite a file written earlier.
         """
+        with open(self.frozen_marker, "w") as f:
+            f.write(f"{os.getpid()}\n")
         return self.run_commands([self.freeze_command])
 
+    def thaw(self):
+        """Resume dynamic updates, which a frozen zone refuses (ACME dns-01 among them)."""
+        result = self.run_commands([self.thaw_command])
+        if result[0]:
+            try:
+                os.unlink(self.frozen_marker)
+            except FileNotFoundError:
+                pass
+        return result
+
     def reload(self):
-        """Load the written zone files and resume dynamic updates."""
-        return self.run_commands([self.reload_command, self.thaw_command])
+        """Load the written zone files and resume dynamic updates.
+
+        Thaws even when the reload fails, and reports the first failure.
+        """
+        reloaded = self.run_commands([self.reload_command])
+        thawed = self.thaw()
+        return reloaded if not reloaded[0] else thawed
 
     def find_zone(self, name):
         for model in (Domain, Ip4Subnet, Ip6Subnet):
