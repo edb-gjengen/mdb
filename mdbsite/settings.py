@@ -40,6 +40,7 @@ STATICFILES_FINDERS = (
 SECRET_KEY = "@4ps=ebofcpv8sb#y7gm896=l&l*u0u-pgo7bcdj%+(k+2lqnl"
 
 MIDDLEWARE = (
+    "django.middleware.security.SecurityMiddleware",
     # Serves STATIC_ROOT, so production needs nothing in front but a proxy.
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -47,6 +48,7 @@ MIDDLEWARE = (
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 )
 
 ROOT_URLCONF = "mdbsite.urls"
