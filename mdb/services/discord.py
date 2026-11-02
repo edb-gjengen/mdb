@@ -4,6 +4,8 @@ import requests
 from django.conf import settings
 
 MAX_CONTENT_LENGTH = 2000
+# Seconds; a hung webhook must not hold up the sync that called it.
+TIMEOUT = 10
 
 
 def notify(subject, message, preformatted=None):
@@ -31,7 +33,9 @@ def notify(subject, message, preformatted=None):
 
 
 def _send_json(url, content):
-    resp = requests.post(url, json={"username": "MDB", "content": content})
+    resp = requests.post(
+        url, json={"username": "MDB", "content": content}, timeout=TIMEOUT
+    )
     resp.raise_for_status()
 
 
@@ -41,5 +45,6 @@ def _send_as_file(url, subject, content):
         url,
         data={"payload_json": json.dumps(payload)},
         files={"files[0]": ("notification.txt", content.encode(), "text/plain")},
+        timeout=TIMEOUT,
     )
     resp.raise_for_status()
