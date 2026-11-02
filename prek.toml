@@ -1,0 +1,32 @@
+# Git hooks, run by prek (https://prek.j178.dev). `prek install` once per clone; CI runs
+# them all (.gitea/workflows/prek.yaml).
+
+[[repos]]
+repo = "https://github.com/astral-sh/ruff-pre-commit"
+rev = "v0.15.6" # keep in sync with ruff in uv.lock
+hooks = [
+    { id = "ruff-check", args = ["--fix"] },
+    { id = "ruff-format" },
+]
+
+[[repos]]
+repo = "https://github.com/adamchainz/django-upgrade"
+rev = "1.33.0"
+hooks = [{ id = "django-upgrade", args = ["--target-version", "6.0"] }]
+
+[[repos]]
+repo = "https://github.com/pre-commit/pre-commit-hooks"
+rev = "v6.0.0"
+hooks = [
+    { id = "trailing-whitespace" },
+    { id = "end-of-file-fixer" },
+    { id = "check-merge-conflict" },
+    { id = "check-added-large-files" },
+    { id = "check-toml" },
+    { id = "check-yaml" },
+]
+
+[[repos]]
+repo = "https://github.com/astral-sh/uv-pre-commit"
+rev = "0.13.6"
+hooks = [{ id = "uv-lock" }] # uv.lock stays in sync with pyproject.toml

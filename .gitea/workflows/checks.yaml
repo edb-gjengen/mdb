@@ -1,9 +1,10 @@
 name: checks
 
-# Checks only, nothing here deploys
+# Checks only, nothing here deploys. deploy.yaml calls it before deploying.
 on:
   push:
   pull_request:
+  workflow_call:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

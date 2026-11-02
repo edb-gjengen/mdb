@@ -1,0 +1,33 @@
+name: deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  checks:
+    if: vars.DEPLOY_SEGA == 'true'
+    uses: ./.gitea/workflows/checks.yaml
+  prek:
+    if: vars.DEPLOY_SEGA == 'true'
+    uses: ./.gitea/workflows/prek.yaml
+
+  # sega's authorized_keys sends this key to mdb-deploy, which reads the sha from the ssh
+  # command line, builds that commit on the host and switches to it (edb-infra's
+  # roles/mdb.md).
+  deploy-sega:
+    if: vars.DEPLOY_SEGA == 'true'
+    runs-on: ubuntu-latest
+    needs:
+      - checks
+      - prek
+    steps:
+      - name: Deploy
+        run: |
+          command -v ssh-agent >/dev/null || ( apt-get update -y && apt-get install openssh-client -y )
+          eval $(ssh-agent -s)
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" | tr -d '\r' | ssh-add -
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "${{ secrets.SSH_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
+          ssh mdb-deploy@sega.neuf.no "${{ github.sha }}"

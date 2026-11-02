@@ -1,0 +1,14 @@
+name: prek
+
+# The hooks in prek.toml. deploy.yaml calls it before deploying.
+on:
+  push:
+  pull_request:
+  workflow_call:
+
+jobs:
+  prek:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: j178/prek-action@v1
