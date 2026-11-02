@@ -59,16 +59,25 @@ class Ip4ModelChoiceField(ModelChoiceField):
 
 
 class InterfaceForm(forms.ModelForm):
-    model = Interface
+    class Meta:
+        model = Interface
+        fields = "__all__"
 
     def clean(self):
-        macaddr = self.cleaned_data["macaddr"]
-        ip4address = self.cleaned_data["ip4address"]
+        cleaned_data = super().clean()
+        # Missing when the field itself failed validation, and the address is optional.
+        macaddr = cleaned_data.get("macaddr")
+        ip4address = cleaned_data.get("ip4address")
+        if not macaddr or ip4address is None:
+            return cleaned_data
 
-        for interface in Interface.objects.filter(macaddr=macaddr):
-            subnet = interface.ip4address.subnet
-            if subnet == ip4address.subnet and interface != self.instance:
-                raise ValidationError("Macaddr already in this subnet")
+        # dhcpd matches MAC addresses whatever their case.
+        clashes = Interface.objects.filter(
+            macaddr__iexact=macaddr, ip4address__subnet=ip4address.subnet
+        ).exclude(pk=self.instance.pk)
+        if clashes.exists():
+            raise ValidationError("Macaddr already in this subnet")
+        return cleaned_data
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -76,4 +85,7 @@ class InterfaceForm(forms.ModelForm):
         # Join Ip4Address with tables interface and host,
         # before printing the select labels that walk those two relations.
         queryset = Ip4Address.objects.select_related("interface", "interface__host")
-        self.fields["ip4address"] = Ip4ModelChoiceField(queryset=queryset)
+        # Not required, as on the model: a host can have interfaces without IPv4.
+        self.fields["ip4address"] = Ip4ModelChoiceField(
+            queryset=queryset, required=False
+        )
