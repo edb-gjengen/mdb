@@ -35,11 +35,9 @@ def test_validate_puppet_host_by_secret(api_client, user_with_token, host):
     _, token = user_with_token
     data = {
         "pxe_key": host.pxe_key,
-        "certname": "{}.{}".format(
-            host.hostname, host.interface_set.first().domain.domain_name
-        ),
+        "certname": f"{host.hostname}.{host.interface_set.first().domain.domain_name}",
     }
-    api_client.credentials(HTTP_AUTHORIZATION="Token {}".format(token.key))
+    api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
     res = api_client.post(reverse("api-validate-host-secret"), data, format="json")
     assert res.status_code == 200, res.content
     assert not Host.objects.get(pk=host.pk).pxe_installable

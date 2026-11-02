@@ -54,33 +54,33 @@ class Domain(models.Model):
         return self.domain_name == other.domain_name
 
     def zone_file_contents(self):
-        content = "; serial:%d\n" % self.domain_serial
-        content += "; zone file for %s\n" % self.domain_name
-        content += "; %s\n" % datetime.datetime.now()
-        content += "; filename: %s\n" % self.domain_filename
-        content += "$TTL %s\n" % self.domain_ttl
-        content += "@ IN SOA %s. %s. (\n" % (
+        content = f"; serial:{self.domain_serial:d}\n"
+        content += f"; zone file for {self.domain_name}\n"
+        content += f"; {datetime.datetime.now()}\n"
+        content += f"; filename: {self.domain_filename}\n"
+        content += f"$TTL {self.domain_ttl}\n"
+        content += "@ IN SOA {}. {}. (\n".format(
             self.domain_soa,
             self.domain_admin.replace("@", "."),
         )
-        content += "\t%d\t; serial\n" % self.domain_serial
-        content += "\t%d\t; refresh\n" % self.domain_refresh
-        content += "\t%d\t; retry\n" % self.domain_retry
-        content += "\t%d\t; expire\n" % self.domain_expire
-        content += "\t%d )\t; minimum ttl\n" % self.domain_minimum_ttl
+        content += f"\t{self.domain_serial:d}\t; serial\n"
+        content += f"\t{self.domain_refresh:d}\t; refresh\n"
+        content += f"\t{self.domain_retry:d}\t; retry\n"
+        content += f"\t{self.domain_expire:d}\t; expire\n"
+        content += f"\t{self.domain_minimum_ttl:d} )\t; minimum ttl\n"
         content += ";\n"
 
         for nameserver in self.domain_nameservers.all():
-            content += "@\tIN\tNS\t%s.\n" % nameserver.hostname
+            content += f"@\tIN\tNS\t{nameserver.hostname}.\n"
 
         for mx in self.domain_mailexchanges.all():
-            content += "@\t\tMX\t%d %s.\n" % (mx.priority, mx.hostname)
+            content += f"@\t\tMX\t{mx.priority:d} {mx.hostname}.\n"
 
         if self.domain_ipaddr is not None:
-            content += "@\tIN\tA\t%s\n" % self.domain_ipaddr
+            content += f"@\tIN\tA\t{self.domain_ipaddr}\n"
 
         if self.domain_ip6addr:
-            content += "@\tIN\tAAAA\t%s\n" % self.domain_ip6addr
+            content += f"@\tIN\tAAAA\t{self.domain_ip6addr}\n"
 
         content += "; SRV records\n"
 
@@ -100,7 +100,7 @@ class Domain(models.Model):
         content += "; CNAME records \n"
 
         for cname in self.domaincnamerecord_set.all():
-            content += "%s\tIN\tCNAME\t%s\n" % (cname.name, cname.target)
+            content += f"{cname.name}\tIN\tCNAME\t{cname.target}\n"
 
         content += "; TXT records \n"
 
@@ -112,16 +112,12 @@ class Domain(models.Model):
         for interface in self.interface_set.all():
             host = interface.host
             if interface.ip4address:
-                content += "%-20s\tIN\tA\t%s\n" % (
-                    host.hostname,
-                    interface.ip4address.address,
+                content += (
+                    f"{host.hostname:<20}\tIN\tA\t{interface.ip4address.address}\n"
                 )
 
             for ipv6addr in interface.ip6address_set.all():
-                content += "%-20s\tIN\tAAAA\t%s\n" % (
-                    host.hostname,
-                    ipv6addr.full_address(),
-                )
+                content += f"{host.hostname:<20}\tIN\tAAAA\t{ipv6addr.full_address()}\n"
 
             if host.allow_email and interface.ip4address:
                 content += f'{host.hostname}\tTXT\t"v=spf1 mx ip4:{interface.ip4address.address} -all"\n'
@@ -143,15 +139,7 @@ class DomainSrvRecord(models.Model):
     created_date = models.DateTimeField(auto_now_add=True)
 
     def as_record(self):
-        return "{}.{}.{}. IN SRV {} {} {} {}.".format(
-            self.srvce,
-            self.prot,
-            self.name,
-            self.priority,
-            self.weight,
-            self.port,
-            self.target,
-        )
+        return f"{self.srvce}.{self.prot}.{self.name}. IN SRV {self.priority} {self.weight} {self.port} {self.target}."
 
     def __str__(self):
         return self.as_record()
@@ -167,7 +155,7 @@ class DomainTxtRecord(models.Model):
     created_date = models.DateTimeField(auto_now_add=True)
 
     def as_record(self):
-        return "{} TXT {}".format(self.name, self.target)
+        return f"{self.name} TXT {self.target}"
 
     def __str__(self):
         return self.as_record()
@@ -180,7 +168,7 @@ class DomainCnameRecord(models.Model):
     created_date = models.DateTimeField(auto_now_add=True)
 
     def as_record(self):
-        return "{} IN CNAME {}".format(self.name, self.target)
+        return f"{self.name} IN CNAME {self.target}"
 
     def __str__(self):
         return self.as_record()
@@ -193,7 +181,7 @@ class DomainARecord(models.Model):
     created_date = models.DateTimeField(auto_now_add=True)
 
     def as_record(self):
-        return "{} IN A {}".format(self.name, self.target)
+        return f"{self.name} IN A {self.target}"
 
     def __str__(self):
         return self.as_record()
@@ -206,7 +194,7 @@ class DomainAAAARecord(models.Model):
     created_date = models.DateTimeField(auto_now_add=True)
 
     def as_record(self):
-        return "{} IN AAAA {}".format(self.name, self.target)
+        return f"{self.name} IN AAAA {self.target}"
 
     def __str__(self):
         return self.as_record()
@@ -223,29 +211,28 @@ class DhcpConfig(models.Model):
     log_facility = models.CharField(max_length=255)
 
     def dhcpd_configuration(self):
-        content = "# Autogenerated configuration %s\n" % datetime.datetime.now()
+        content = f"# Autogenerated configuration {datetime.datetime.now()}\n"
         if self.authoritative:
             content += "authoritative;\n"
-        content += "default-lease-time %d;\n" % self.default_lease_time
-        content += "max-lease-time %d;\n" % self.max_lease_time
-        content += "log-facility %s;\n" % self.log_facility
-        content += "ddns-update-style %s;\n" % self.ddns_update_style
+        content += f"default-lease-time {self.default_lease_time:d};\n"
+        content += f"max-lease-time {self.max_lease_time:d};\n"
+        content += f"log-facility {self.log_facility};\n"
+        content += f"ddns-update-style {self.ddns_update_style};\n"
 
         # time to write the subnet definitions
         for subnet in self.ip4subnet_set.all():
-            content += "\n# %s\n" % subnet.name
-            content += "subnet %s netmask %s {\n" % (subnet.network, subnet.netmask)
+            content += f"\n# {subnet.name}\n"
+            content += f"subnet {subnet.network} netmask {subnet.netmask} {{\n"
 
             for option in subnet.dhcpoption_set.all():
-                content += "\toption %s %s;\n" % (option.key, option.value)
+                content += f"\toption {option.key} {option.value};\n"
 
             for option in subnet.dhcpcustomfield_set.all():
-                content += "\t%s;\n" % option.value
+                content += f"\t{option.value};\n"
 
             if subnet.dhcp_dynamic:
-                content += "\trange %s %s;\n" % (
-                    subnet.dhcp_dynamic_start,
-                    subnet.dhcp_dynamic_end,
+                content += (
+                    f"\trange {subnet.dhcp_dynamic_start} {subnet.dhcp_dynamic_end};\n"
                 )
 
             content += "}\n"
@@ -259,14 +246,13 @@ class DhcpConfig(models.Model):
                 ):
                     continue
                 _if = ip4address.interface
-                content += "\nhost %s {\n" % _if.host.hostname
-                content += "\thardware ethernet %s;\n" % _if.macaddr
-                content += "\tfixed-address %s.%s;\n" % (
-                    _if.host.hostname,
-                    _if.domain.domain_name,
+                content += f"\nhost {_if.host.hostname} {{\n"
+                content += f"\thardware ethernet {_if.macaddr};\n"
+                content += (
+                    f"\tfixed-address {_if.host.hostname}.{_if.domain.domain_name};\n"
                 )
                 if len(_if.pxe_filename) > 0:
-                    content += '\tfilename "%s";\n' % _if.pxe_filename
+                    content += f'\tfilename "{_if.pxe_filename}";\n'
                 content += "}\n"
 
         return content
@@ -307,30 +293,30 @@ class Ip6Subnet(models.Model):
         Delegation in ip6.arpa happens on nibble (4-bit) boundaries, so the
         prefix is truncated down to whole nibbles.
         """
-        network = ipaddress.IPv6Address("%s::" % self.network)
+        network = ipaddress.IPv6Address(f"{self.network}::")
         nibbles = self.netmask // 4
         return ".".join(network.exploded.replace(":", "")[:nibbles])[::-1] + ".ip6.arpa"
 
     def zone_file_contents(self, generate_unassigned=False):
         content = ""
-        content += "; zone file for %s\n" % self.domain_name
-        content += "; %s\n" % datetime.datetime.now()
-        content += "; filename: %s\n" % self.domain_filename
-        content += "$TTL %s\n" % self.domain_ttl
-        content += "@ IN SOA %s. %s. (\n" % (
+        content += f"; zone file for {self.domain_name}\n"
+        content += f"; {datetime.datetime.now()}\n"
+        content += f"; filename: {self.domain_filename}\n"
+        content += f"$TTL {self.domain_ttl}\n"
+        content += "@ IN SOA {}. {}. (\n".format(
             self.domain_soa,
             self.domain_admin.replace("@", "."),
         )
-        content += "\t%d\t; serial\n" % self.domain_serial
-        content += "\t%d\t; refresh\n" % self.domain_refresh
-        content += "\t%d\t; retry\n" % self.domain_retry
-        content += "\t%d\t; expire\n" % self.domain_expire
-        content += "\t%d )\t; minimum ttl\n" % self.domain_minimum_ttl
+        content += f"\t{self.domain_serial:d}\t; serial\n"
+        content += f"\t{self.domain_refresh:d}\t; refresh\n"
+        content += f"\t{self.domain_retry:d}\t; retry\n"
+        content += f"\t{self.domain_expire:d}\t; expire\n"
+        content += f"\t{self.domain_minimum_ttl:d} )\t; minimum ttl\n"
         content += ";\n"
         content += ";\n"
 
         for nameserver in self.domain_nameservers.all():
-            content += "@\tIN\tNS\t%s.\n" % nameserver.hostname
+            content += f"@\tIN\tNS\t{nameserver.hostname}.\n"
 
         content += ";\n"
 
@@ -343,14 +329,13 @@ class Ip6Subnet(models.Model):
 
             if addr.interface.domain is None:
                 continue
-            hostname = "%s.%s" % (
-                addr.interface.host.hostname,
-                addr.interface.domain.domain_name,
+            hostname = (
+                f"{addr.interface.host.hostname}.{addr.interface.domain.domain_name}"
             )
 
             ip = ipaddress.IPv6Address(self.network + addr.address)
             ip = ".".join(ip.exploded.replace(":", "")[16:])[::-1]
-            content += "%s\tPTR\t%s.\n" % (ip, hostname)
+            content += f"{ip}\tPTR\t{hostname}.\n"
 
             # addr = ipaddr.IPv6Address("%s%s" % (interface.
             # content += "%20s\tIN\tPTR\t%s.\n" % (addr.address.split(".")[3], hostname)
@@ -401,51 +386,43 @@ class Ip4Subnet(models.Model):
         This is the apex BIND expects -- it must match the zone name in
         named.conf or rndc refuses to load the file.
         """
-        net = ipaddress.IPv4Network(
-            "%s/%s" % (self.network, self.netmask), strict=False
-        )
+        net = ipaddress.IPv4Network(f"{self.network}/{self.netmask}", strict=False)
         o1, o2, o3, o4 = str(net.network_address).split(".")
-        rev = "%s.%s.%s" % (o3, o2, o1)
+        rev = f"{o3}.{o2}.{o1}"
         if net.prefixlen > 24:
-            return "%s-%d.%s.in-addr.arpa" % (o4, net.prefixlen, rev)
-        return "%s.in-addr.arpa" % rev
+            return f"{o4}-{net.prefixlen:d}.{rev}.in-addr.arpa"
+        return f"{rev}.in-addr.arpa"
 
     def zone_file_contents(self, generate_unassigned=False):
         content = ""
-        content += "; zone file for %s\n" % self.domain_name
-        content += "; %s\n" % datetime.datetime.now()
-        content += "; filename: %s\n" % self.domain_filename
-        content += "$TTL %s\n" % self.domain_ttl
-        content += "@ IN SOA %s. %s. (\n" % (
+        content += f"; zone file for {self.domain_name}\n"
+        content += f"; {datetime.datetime.now()}\n"
+        content += f"; filename: {self.domain_filename}\n"
+        content += f"$TTL {self.domain_ttl}\n"
+        content += "@ IN SOA {}. {}. (\n".format(
             self.domain_soa,
             self.domain_admin.replace("@", "."),
         )
-        content += "\t%d\t; serial\n" % self.domain_serial
-        content += "\t%d\t; refresh\n" % self.domain_refresh
-        content += "\t%d\t; retry\n" % self.domain_retry
-        content += "\t%d\t; expire\n" % self.domain_expire
-        content += "\t%d )\t; minimum ttl\n" % self.domain_minimum_ttl
+        content += f"\t{self.domain_serial:d}\t; serial\n"
+        content += f"\t{self.domain_refresh:d}\t; refresh\n"
+        content += f"\t{self.domain_retry:d}\t; retry\n"
+        content += f"\t{self.domain_expire:d}\t; expire\n"
+        content += f"\t{self.domain_minimum_ttl:d} )\t; minimum ttl\n"
         content += ";\n"
         content += ";\n"
 
         for nameserver in self.domain_nameservers.all():
-            content += "@\tIN\tNS\t%s.\n" % nameserver.hostname
+            content += f"@\tIN\tNS\t{nameserver.hostname}.\n"
 
         content += ";\n"
 
         for addr in self.ip4address_set.all():
             """ Get PTR records for each v4 address in subnet """
             if hasattr(addr, "interface") and addr.interface.domain:
-                hostname = "%s.%s" % (
-                    addr.interface.host.hostname,
-                    addr.interface.domain.domain_name,
-                )
-                content += "%-20s\tIN\tPTR\t%s.\n" % (
-                    addr.address.split(".")[3],
-                    hostname,
-                )
+                hostname = f"{addr.interface.host.hostname}.{addr.interface.domain.domain_name}"
+                content += f"{addr.address.split('.')[3]:<20}\tIN\tPTR\t{hostname}.\n"
             elif not hasattr(addr, "interface") and generate_unassigned:
-                content += "%s\tIN\tPTR\t%s.%s\n" % (
+                content += "{}\tIN\tPTR\t{}.{}\n".format(
                     addr.address,
                     addr.address.split(".")[3],
                     "dhcp.neuf.no.",
@@ -580,7 +557,7 @@ class Interface(models.Model):
     domain = models.ForeignKey(Domain, models.CASCADE)
 
     def __str__(self):
-        return "%s (%s on %s)" % (self.macaddr, self.name, self.host.hostname)
+        return f"{self.macaddr} ({self.name} on {self.host.hostname})"
 
     def ipv6_enabled(self):
         return self.ip6address_set.exists()
@@ -595,11 +572,7 @@ class Ip6Address(models.Model):
         return self.subnet.network + self.address
 
     def __str__(self):
-        return "%s (%s on %s)" % (
-            self.full_address(),
-            self.interface.name,
-            self.interface.host.hostname,
-        )
+        return f"{self.full_address()} ({self.interface.name} on {self.interface.host.hostname})"
 
     class Meta:
         verbose_name = "IPv6 address"

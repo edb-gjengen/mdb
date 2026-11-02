@@ -3,6 +3,7 @@ from io import StringIO
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 from mdb.management.commands.zone_sync import Command as CommandClass
 from mdb.services.zone_sync import ZoneSyncService
 

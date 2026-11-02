@@ -12,9 +12,9 @@ from mdb.models import Domain, Ip4Subnet, Ip6Subnet
 
 class ZoneSyncService:
     rndc_bin = shutil.which("rndc") or "/usr/sbin/rndc"
-    freeze_command = "%s freeze" % rndc_bin
-    reload_command = "%s reload" % rndc_bin
-    thaw_command = "%s thaw" % rndc_bin
+    freeze_command = f"{rndc_bin} freeze"
+    reload_command = f"{rndc_bin} reload"
+    thaw_command = f"{rndc_bin} thaw"
     checkzone_bin = shutil.which("named-checkzone") or "/usr/sbin/named-checkzone"
     compilezone_bin = shutil.which("named-compilezone") or "/usr/sbin/named-compilezone"
     checkzone_dir = "/tmp/mdb-checkzone"
@@ -28,7 +28,7 @@ class ZoneSyncService:
     def validate_binaries_exist(self):
         for f in (self.checkzone_bin, self.compilezone_bin, self.rndc_bin):
             if not os.path.isfile(f) and not self.debug:
-                print("ERROR: no such file %s, exiting..." % f)
+                print(f"ERROR: no such file {f}, exiting...")
                 sys.exit(1)
 
     def run_commands(self, commands):
@@ -76,9 +76,9 @@ class ZoneSyncService:
         zonetype = getattr(zone._meta, "verbose_name", None) or zone._meta.model_name
 
         try:
-            with open(zone.domain_filename, "r") as f:
+            with open(zone.domain_filename) as f:
                 old = f.read()
-        except IOError:
+        except OSError:
             old = ""
 
         # Dynamic updates (ACME dns-01 challenges) raise the serial in the
@@ -97,13 +97,8 @@ class ZoneSyncService:
         }
 
         print(
-            "updating %s %s [%d -> %d]"
-            % (
-                zonetype,
-                zone.domain_name,
-                zone.domain_active_serial,
-                zone.domain_serial,
-            )
+            f"updating {zonetype} {zone.domain_name} "
+            f"[{zone.domain_active_serial:d} -> {zone.domain_serial:d}]"
         )
 
         # Normalize to BIND's canonical format so the on-disk file and our
@@ -161,11 +156,7 @@ class ZoneSyncService:
             tmpfile = f.name
 
         try:
-            cmd = "%s -f text -F text -s relative -i none -o - %s %s" % (
-                self.compilezone_bin,
-                zone.domain_name,
-                tmpfile,
-            )
+            cmd = f"{self.compilezone_bin} -f text -F text -s relative -i none -o - {zone.domain_name} {tmpfile}"
             status, output = getstatusoutput(cmd + " 2>/dev/null")
             if status == 0:
                 return output
@@ -189,6 +180,4 @@ class ZoneSyncService:
         with open(zonefile, "w") as f:
             f.write(contents)
 
-        return getstatusoutput(
-            "%s %s %s" % (self.checkzone_bin, zone.domain_name, zonefile)
-        )
+        return getstatusoutput(f"{self.checkzone_bin} {zone.domain_name} {zonefile}")

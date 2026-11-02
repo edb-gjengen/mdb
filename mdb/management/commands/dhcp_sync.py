@@ -42,7 +42,7 @@ class Command(BaseCommand):
         config = service.get_config()
 
         if not service.needs_update(config):
-            self.stdout.write("Nothing to do, serial is the same: %s\n" % config.serial)
+            self.stdout.write(f"Nothing to do, serial is the same: {config.serial}\n")
             return
 
         if output is None:
@@ -64,20 +64,19 @@ class Command(BaseCommand):
             self.stdout.write("fail\n")
             message = (
                 "Failed to restart isc-dhcp-server, please inspect...\n\n"
-                "%s@%s$ %s\n%s"
-                % (os.getlogin(), os.uname()[1], service.restart_command, output)
+                f"{os.getlogin()}@{os.uname()[1]}$ {service.restart_command}\n{output}"
             )
             discord.notify(
-                subject="⚠️ FAIL: dhcpd %s -> %s" % (old_serial, config.active_serial),
+                subject=f"⚠️ FAIL: dhcpd {old_serial} -> {config.active_serial}",
                 message=message,
                 preformatted=diff or None,
             )
             raise SystemExit(1)
 
         self.stdout.write("ok\n")
-        message = "Updated dhcpd configuration to serial %d" % config.active_serial
+        message = f"Updated dhcpd configuration to serial {config.active_serial:d}"
         discord.notify(
-            subject="✅ Success: dhcpd %s -> %s" % (old_serial, config.active_serial),
+            subject=f"✅ Success: dhcpd {old_serial} -> {config.active_serial}",
             message=message,
             preformatted=diff or None,
         )

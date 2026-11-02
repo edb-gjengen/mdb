@@ -33,9 +33,9 @@ class DhcpSyncService:
         Returns (old_serial, diff).
         """
         try:
-            with open(output_path, "r") as f:
+            with open(output_path) as f:
                 old = f.read()
-        except IOError:
+        except OSError:
             old = ""
 
         new = config.dhcpd_configuration()

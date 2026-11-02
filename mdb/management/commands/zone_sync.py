@@ -48,7 +48,7 @@ class Command(BaseCommand):
         if zone_name:
             zone = service.find_zone(zone_name)
             if zone is None:
-                self.stderr.write("error: zone '%s' not found\n" % zone_name)
+                self.stderr.write(f"error: zone '{zone_name}' not found\n")
                 raise SystemExit(1)
             zones = [zone]
         else:
@@ -107,7 +107,7 @@ class Command(BaseCommand):
 
         self.stdout.write("ok\n")
         for zone, info in changes.items():
-            message = "Successfully updated bind zone file for `%s`" % zone
+            message = f"Successfully updated bind zone file for `{zone}`"
             if info["errors"]:
                 message += "\n\n" + info["errors"]
             discord.notify(
@@ -120,14 +120,7 @@ class Command(BaseCommand):
         self, summary, failed_command, output, zones, errors="", diffs=""
     ):
         zone_list = "\n".join("- " + z for z in zones)
-        message = "%s, please inspect...\n\n%s@%s$ %s\n%s\n%s" % (
-            summary,
-            os.getlogin(),
-            os.uname()[1],
-            failed_command,
-            output,
-            zone_list,
-        )
+        message = f"{summary}, please inspect...\n\n{os.getlogin()}@{os.uname()[1]}$ {failed_command}\n{output}\n{zone_list}"
         if errors:
             message += "\n\n" + errors
         discord.notify(

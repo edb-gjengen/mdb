@@ -22,7 +22,7 @@ class SerialNumberInput(NumberInput):
 
     def render(self, name, value, attrs=None, renderer=None):
         field = super().render(name, value, attrs, renderer)
-        field_id = (attrs or {}).get("id", "id_%s" % name)
+        field_id = (attrs or {}).get("id", f"id_{name}")
         extra = """
 <button type="button" class="button" style="margin-left: 0.5em;"
         onclick="mdbBumpSerial('__ID__')">Today + next serial</button>
@@ -44,9 +44,7 @@ if (typeof window.mdbBumpSerial === 'undefined') {
     };
 }
 </script>
-""".replace(
-            "__ID__", field_id
-        )
+""".replace("__ID__", field_id)
         return mark_safe(field + extra)
 
 
@@ -55,7 +53,7 @@ class Ip4ModelChoiceField(ModelChoiceField):
         if not hasattr(obj, "interface"):
             return obj.address
 
-        return "{} ({})".format(obj.address, obj.interface.host.hostname)
+        return f"{obj.address} ({obj.interface.host.hostname})"
 
 
 class InterfaceForm(forms.ModelForm):
@@ -71,7 +69,7 @@ class InterfaceForm(forms.ModelForm):
                 raise ValidationError("Macaddr already in this subnet")
 
     def __init__(self, *args, **kwargs):
-        super(InterfaceForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         # Join Ip4Address with tables interface and host,
         # before printing the select labels that walk those two relations.

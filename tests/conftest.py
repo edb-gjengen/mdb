@@ -53,11 +53,3 @@ def db_domain(db, tmp_path):
     )
     DomainTxtRecord.objects.create(domain=domain, name="@", target='"v=spf1 mx ~all"')
     return domain
-
-
-def load_command_class():
-    path = pathlib.Path(__file__).parent.parent / "mdb/management/commands/zone-sync.py"
-    spec = importlib.util.spec_from_file_location("zone_sync_command", path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod.Command

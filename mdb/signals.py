@@ -1,12 +1,13 @@
+import ipaddress
 import logging
 import os
 import uuid
-from django.conf import settings
-from django.db.models.signals import pre_delete, post_save, pre_save
-from django.dispatch import receiver
-import ipaddress
 
-from mdb.models import Interface, Host, Ip6Subnet, Ip4Subnet, Ip4Address
+from django.conf import settings
+from django.db.models.signals import post_save, pre_delete, pre_save
+from django.dispatch import receiver
+
+from mdb.models import Host, Interface, Ip4Address, Ip4Subnet, Ip6Subnet
 from mdb.utils import format_domain_serial_and_add_one
 
 logger = logging.getLogger(__name__)
@@ -106,7 +107,7 @@ def create_pxe_key_and_write_pxe_files_when_host_changes(
             # Write pxeconfig file to disk
             with open(path, "w+") as f:
                 f.write(pxe_file)
-                logger.info("Created or updated {}".format(path))
+                logger.info(f"Created or updated {path}")
             os.chmod(path, 0o644)  # Not writeable for all
 
             # Also set necessary fields for pxe installation
@@ -128,7 +129,7 @@ def create_pxe_key_and_write_pxe_files_when_host_changes(
             if os.path.exists(path):
                 # Delete pxeconfig file from disk
                 os.unlink(path)
-                logger.info("deleted {}".format(path))
+                logger.info(f"deleted {path}")
 
 
 @receiver(pre_delete, sender=Interface)

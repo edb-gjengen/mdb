@@ -54,9 +54,10 @@ class InterfaceInline(admin.TabularInline):
     form = InterfaceForm
 
     def get_queryset(self, request):
-        return super(InterfaceInline, self).get_queryset(request).select_related()
+        return super().get_queryset(request).select_related()
 
 
+@admin.register(Host)
 class HostAdmin(admin.ModelAdmin):
     ordering = ("hostname",)
     inlines = [InterfaceInline]
@@ -114,28 +115,26 @@ class HostAdmin(admin.ModelAdmin):
         )
         return ", ".join(addresses)
 
+    @admin.display(description="in domains")
     def in_domain(self, host):
         domains = host.interface_set.values_list("domain__domain_name", flat=True)
         return ",".join(domains)
 
-    in_domain.short_description = "in domains"
-
+    @admin.display(boolean=True)
     def ipv6_enabled(self, host):
         ipv6_ifs = host.interface_set.annotate(num_ipv6=Count("ip6address")).filter(
             num_ipv6__gt=0
         )
         return ipv6_ifs.exists()
 
-    ipv6_enabled.boolean = True
     # FIXME: custom filter to sort custom field
 
     @staticmethod
     def _get_host_warning_message(host, ifs):
         ifs_str = ", ".join([_if.name for _if in ifs])
-        return "Host {} might not be installable since interface(s) {} has no IP set.".format(
-            host, ifs_str
-        )
+        return f"Host {host} might not be installable since interface(s) {ifs_str} has no IP set."
 
+    @admin.action(description="Mark selected hosts as PXE installable")
     def set_installable(self, request, queryset):
         invalid_ifs_per_host = []
 
@@ -153,10 +152,8 @@ class HostAdmin(admin.ModelAdmin):
                 request, message="\n".join(invalid_ifs_per_host), level=messages.WARNING
             )
 
-    set_installable.short_description = "Mark selected hosts as PXE installable"
-
     def get_queryset(self, request):
-        return super(HostAdmin, self).get_queryset(request).select_related()
+        return super().get_queryset(request).select_related()
 
 
 class Ip4AddressInline(admin.TabularInline):
@@ -164,10 +161,9 @@ class Ip4AddressInline(admin.TabularInline):
     extra = 0
     readonly_fields = ["address", "assigned_to_host"]
 
+    @admin.display(description="Assigned to Host")
     def assigned_to_host(self, addr):
         return addr.interface.host
-
-    assigned_to_host.short_description = "Assigned to Host"
 
 
 class DhcpOptionInline(admin.TabularInline):
@@ -180,6 +176,7 @@ class DhcpCustomFieldInline(admin.TabularInline):
     extra = 0
 
 
+@admin.register(Ip4Subnet)
 class Ip4SubnetAdmin(SerialFieldAdminMixin, admin.ModelAdmin):
     list_display = [
         "name",
@@ -194,32 +191,32 @@ class Ip4SubnetAdmin(SerialFieldAdminMixin, admin.ModelAdmin):
     readonly_fields = ["domain_name"]
     inlines = [DhcpOptionInline, DhcpCustomFieldInline, Ip4AddressInline]
 
+    @admin.display(description="# addresses")
     def num_addresses(self, ip4subnet):
         subnet = ipaddress.IPv4Network(ip4subnet.network + "/" + ip4subnet.netmask)
         return subnet.num_addresses
 
+    @admin.display(description="broadcast")
     def broadcast_address(self, ip4subnet):
         subnet = ipaddress.IPv4Network(ip4subnet.network + "/" + ip4subnet.netmask)
         return subnet.broadcast_address
 
+    @admin.display(description="first address")
     def first_address(self, ip4subnet):
         subnet = ipaddress.IPv4Network(ip4subnet.network + "/" + ip4subnet.netmask)
         return next(subnet.hosts())
 
+    @admin.display(description="last address")
     def last_address(self, ip4subnet):
         subnet = ipaddress.IPv4Network(ip4subnet.network + "/" + ip4subnet.netmask)
         return list(subnet.hosts())[-1]
 
-    broadcast_address.short_description = "broadcast"
-    num_addresses.short_description = "# addresses"
-    first_address.short_description = "first address"
-    last_address.short_description = "last address"
-
     def get_queryset(self, request):
         # TODO: optimize
-        return super(Ip4SubnetAdmin, self).get_queryset(request)
+        return super().get_queryset(request)
 
 
+@admin.register(Ip6Subnet)
 class Ip6SubnetAdmin(SerialFieldAdminMixin, admin.ModelAdmin):
     list_display = [
         "name",
@@ -234,22 +231,21 @@ class Ip6SubnetAdmin(SerialFieldAdminMixin, admin.ModelAdmin):
 
     def _network(self, ip6subnet):
         return ipaddress.IPv6Network(
-            "%s::/%d" % (ip6subnet.network, ip6subnet.netmask), strict=False
+            f"{ip6subnet.network}::/{ip6subnet.netmask:d}", strict=False
         )
 
+    @admin.display(description="# addresses")
     def num_addresses(self, ip6subnet):
         return self._network(ip6subnet).num_addresses
 
+    @admin.display(description="first address")
     def first_address(self, ip6subnet):
         return self._network(ip6subnet).network_address
 
+    @admin.display(description="last address")
     def last_address(self, ip6subnet):
         # subnet[-1] is O(1); never materialize hosts() for a /64.
         return self._network(ip6subnet)[-1]
-
-    num_addresses.short_description = "# addresses"
-    first_address.short_description = "first address"
-    last_address.short_description = "last address"
 
 
 class DomainSrvRecordInline(admin.TabularInline):
@@ -277,6 +273,7 @@ class DomainAAAARecordInline(admin.TabularInline):
     extra = 0
 
 
+@admin.register(Domain)
 class DomainAdmin(SerialFieldAdminMixin, admin.ModelAdmin):
     inlines = [
         DomainSrvRecordInline,
@@ -298,6 +295,7 @@ class DomainAdmin(SerialFieldAdminMixin, admin.ModelAdmin):
         models.IntegerField: {"widget": NumberInput(attrs={"style": "width: 10em"})},
     }
 
+    @admin.display(description="Num Records")
     def num_records(self, domain):
         host_a_records = Host.objects.filter(interface__domain=domain).count()
         size = {
@@ -306,15 +304,15 @@ class DomainAdmin(SerialFieldAdminMixin, admin.ModelAdmin):
             "TXT": domain.domaintxtrecord_set.count(),
             "A": domain.domainarecord_set.count() + host_a_records,
         }
-        return ", ".join(["{}: {}".format(k, v) for k, v in size.items()])
-
-    num_records.short_description = "Num Records"
+        return ", ".join([f"{k}: {v}" for k, v in size.items()])
 
 
+@admin.register(HostType)
 class HostTypeAdmin(admin.ModelAdmin):
     list_display = ["host_type", "description", "num_members"]
 
 
+@admin.register(OperatingSystem)
 class OperatingSystemAdmin(admin.ModelAdmin):
     list_display = [
         "name",
@@ -326,14 +324,8 @@ class OperatingSystemAdmin(admin.ModelAdmin):
     ]
 
 
-admin.site.register(Domain, DomainAdmin)
-admin.site.register(Host, HostAdmin)
-admin.site.register(Ip4Subnet, Ip4SubnetAdmin)
-admin.site.register(Ip6Subnet, Ip6SubnetAdmin)
 admin.site.register(Ip6Address)
 admin.site.register(Nameserver)
 admin.site.register(MailExchange)
-admin.site.register(OperatingSystem, OperatingSystemAdmin)
-admin.site.register(HostType, HostTypeAdmin)
 admin.site.register(DhcpConfig)
 admin.site.register(DhcpOption)
