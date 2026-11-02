@@ -1,6 +1,7 @@
 import os
 import re
 import shutil
+import stat
 import sys
 import tempfile
 from difflib import context_diff
@@ -124,8 +125,7 @@ class ZoneSyncService:
             path = "/".join(zonefile.split("/")[:-1])
             os.path.isdir(path) or os.makedirs(path)
 
-        with open(zonefile, "w") as f:
-            f.write(new)
+        self.write_zone_file(zonefile, new)
 
         if not self.debug:
             zone.domain_active_serial = zone.domain_serial
@@ -134,6 +134,36 @@ class ZoneSyncService:
         sys.stdout.write("ok\n")
         self.changes[zone.domain_name]["success"] = True
         return True
+
+    def write_zone_file(self, path, contents):
+        """Replace the file at path with contents, whole or not at all.
+
+        named may read the file at any time, and a write in place could leave it half
+        written. The new file takes the old one's owner and mode: bind owns the zone
+        files, and this runs as root.
+        """
+        directory, name = os.path.split(path)
+        fd, tmp = tempfile.mkstemp(dir=directory or ".", prefix=f".{name}.")
+        try:
+            with os.fdopen(fd, "w") as f:
+                f.write(contents)
+                f.flush()
+                os.fsync(f.fileno())
+            try:
+                st = os.stat(path)
+            except FileNotFoundError:
+                os.chmod(tmp, 0o644)
+            else:
+                os.chmod(tmp, stat.S_IMODE(st.st_mode))
+                if (st.st_uid, st.st_gid) != (os.getuid(), os.getgid()):
+                    os.chown(tmp, st.st_uid, st.st_gid)
+            os.replace(tmp, path)
+        except BaseException:
+            try:
+                os.unlink(tmp)
+            except FileNotFoundError:
+                pass
+            raise
 
     def read_serial(self, contents):
         """Return the SOA serial of a zone file, or None if there is none."""

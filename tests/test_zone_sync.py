@@ -1,6 +1,6 @@
 import os
 import subprocess
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from freezegun import freeze_time
@@ -339,3 +339,35 @@ def test_sync_zone_does_not_write_a_zone_that_fails_validation(db_domain, tmp_pa
     change = svc.changes["example.org"]
     assert change["success"] is False
     assert "not-an-address" in change["errors"]
+
+
+def test_write_zone_file_replaces_file_and_keeps_its_mode(service, tmp_path):
+    path = tmp_path / "db.example.org"
+    path.write_text("old\n")
+    path.chmod(0o664)
+    inode = path.stat().st_ino
+
+    service.write_zone_file(str(path), "new\n")
+
+    assert path.read_text() == "new\n"
+    assert path.stat().st_mode & 0o777 == 0o664
+    assert path.stat().st_ino != inode  # renamed over, not written in place
+    assert os.listdir(tmp_path) == ["db.example.org"]
+
+
+def test_write_zone_file_creates_missing_file(service, tmp_path):
+    path = tmp_path / "db.example.org"
+    service.write_zone_file(str(path), "new\n")
+    assert path.read_text() == "new\n"
+    assert path.stat().st_mode & 0o777 == 0o644
+
+
+def test_write_zone_file_leaves_old_file_when_write_fails(service, tmp_path):
+    path = tmp_path / "db.example.org"
+    path.write_text("old\n")
+
+    with patch("os.fsync", side_effect=OSError("disk full")), pytest.raises(OSError):
+        service.write_zone_file(str(path), "new\n")
+
+    assert path.read_text() == "old\n"
+    assert os.listdir(tmp_path) == ["db.example.org"]
