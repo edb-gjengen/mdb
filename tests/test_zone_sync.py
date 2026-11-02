@@ -7,6 +7,7 @@ from freezegun import freeze_time
 
 from mdb.models import (
     DhcpConfig,
+    DomainARecord,
     Host,
     HostType,
     Interface,
@@ -320,3 +321,21 @@ def test_zone_file_contents_includes_ip4_in_spf_record_when_interface_has_addres
     add_host(db_domain, "mailhost", allow_email=True, ip4address=address)
     content = db_domain.zone_file_contents()
     assert f'mailhost\tTXT\t"v=spf1 mx ip4:{address.address} -all"\n' in content
+
+
+def test_sync_zone_does_not_write_a_zone_that_fails_validation(db_domain, tmp_path):
+    with open(db_domain.domain_filename, "w") as f:
+        f.write("the live zone\n")
+    DomainARecord.objects.create(domain=db_domain, name="bad", target="not-an-address")
+    svc = ZoneSyncService(debug=False)
+    svc.checkzone_dir = str(tmp_path)
+
+    assert svc.sync_zone(db_domain) is False
+
+    with open(db_domain.domain_filename) as f:
+        assert f.read() == "the live zone\n"
+    db_domain.refresh_from_db()
+    assert db_domain.domain_active_serial == 0
+    change = svc.changes["example.org"]
+    assert change["success"] is False
+    assert "not-an-address" in change["errors"]

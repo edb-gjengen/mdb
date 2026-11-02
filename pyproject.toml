@@ -51,6 +51,8 @@ ignore = [
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "mdbsite.settings"
 python_files = ["tests/test_*.py"]
+# WhiteNoise, since tests run without collectstatic.
+filterwarnings = ["ignore:No directory at:UserWarning"]
 
 [build-system]
 requires = ["hatchling"]
