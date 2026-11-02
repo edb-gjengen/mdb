@@ -136,12 +136,12 @@ def create_pxe_key_and_write_pxe_files_when_host_changes(
 def update_domain_serial_when_interface_deleted(sender, instance, **kwargs):
     if instance.domain is not None:
         domain = instance.domain
-        domain.domain_serial += 1
+        domain.domain_serial = format_domain_serial_and_add_one(domain.domain_serial)
         domain.save()
 
     if instance.ip4address is not None:
         subnet = instance.ip4address.subnet
-        subnet.domain_serial += 1
+        subnet.domain_serial = format_domain_serial_and_add_one(subnet.domain_serial)
         subnet.save()
 
 

@@ -1,34 +1,16 @@
 import datetime
-import re
 
 
 def format_domain_serial_and_add_one(serial):
-    today = datetime.datetime.now()
-    res = re.findall(
-        rf"^{today.year:4d}{today.month:02d}{today.day:02d}(\d\d)$",
-        str(serial),
-        re.DOTALL,
-    )
+    """Return the serial after `serial`, in the YYYYMMDDnn form where it can be.
 
-    if len(res) == 0:
-        """ This probably means that the serial is malformed
-        or the date is wrong. We assume that if the date is wrong,
-        it is in the past. Just create a new serial starting from 1."""
-        return f"{today.year:4d}{today.month:02d}{today.day:02d}01"
-    elif len(res) == 1:
-        """ The serial contains todays date, just update it. """
-        try:
-            number = int(res[0])
-        except ValueError:
-            number = 1
-        if number >= 99:
-            """ This is bad... Just keep the number on 99.
-            We also send a mail to sysadmins telling them that
-            something is wrong..."""
-
-        else:
-            number += 1
-        return f"{today.year:4d}{today.month:02d}{today.day:02d}{number:02d}"
-    else:
-        """ Just return the first serial for today. """
-        return f"{today.year:4d}{today.month:02d}{today.day:02d}01"
+    The serial must always increase, or named and dhcpd ignore the change. Today's first
+    serial is used while it is higher. Otherwise the serial goes up by one: past nn = 99
+    it carries into the date (2026110299 -> 2026110300), and a serial already ahead of
+    today, from that carry or a dynamic update, keeps counting from where it is.
+    """
+    today_first = int(datetime.date.today().strftime("%Y%m%d")) * 100 + 1
+    try:
+        return max(int(serial) + 1, today_first)
+    except TypeError, ValueError:
+        return today_first

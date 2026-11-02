@@ -1,6 +1,7 @@
 import pytest
+from freezegun import freeze_time
 
-from mdb.models import DhcpConfig, Ip4Subnet, Ip6Subnet
+from mdb.models import DhcpConfig, Domain, Interface, Ip4Subnet, Ip6Subnet
 
 # ---------------------------------------------------------------------------
 # pre_save signals: populate domain_name once, then leave it frozen
@@ -65,3 +66,21 @@ def test_ip6_signal_sets_domain_name():
         domain_filename="db.reverse-v6",
     )
     assert subnet.domain_name == "0.0.0.0.0.0.0.0.8.b.d.0.1.0.0.2.ip6.arpa"
+
+
+# ---------------------------------------------------------------------------
+# pre_delete Interface: the zones it was in get a new serial
+# ---------------------------------------------------------------------------
+
+
+@freeze_time("2026-11-02")
+def test_deleting_interface_raises_zone_serials(domain):
+    subnet = Interface.objects.get(pk=1).ip4address.subnet
+    Domain.objects.filter(pk=domain.pk).update(domain_serial=2026110299)
+    Ip4Subnet.objects.filter(pk=subnet.pk).update(domain_serial=2015010101)
+
+    Interface.objects.get(pk=1).delete()
+
+    # Past 99 the serial carries into the date instead of going back.
+    assert Domain.objects.get(pk=domain.pk).domain_serial == 2026110300
+    assert Ip4Subnet.objects.get(pk=subnet.pk).domain_serial == 2026110201

@@ -10,8 +10,8 @@ class SerialNumberInput(NumberInput):
     """Number input for DNS SOA serials (YYYYMMDDXX).
 
     Renders wide enough to show the full 10-digit serial and adds a button
-    that prefills the field with today's date plus the next available XX
-    counter (incrementing if the field already holds today's serial).
+    that prefills the field with the next serial: today's first, or one more than
+    the current serial when that is higher.
     """
 
     def __init__(self, attrs=None):
@@ -35,12 +35,14 @@ if (typeof window.mdbBumpSerial === 'undefined') {
         var today = '' + now.getFullYear()
             + String(now.getMonth() + 1).padStart(2, '0')
             + String(now.getDate()).padStart(2, '0');
-        var current = (input.value || '').trim();
-        var xx = 1;
-        if (current.length === 10 && current.slice(0, 8) === today) {
-            xx = Math.min(parseInt(current.slice(8), 10) + 1, 99);
+        // As mdb.utils.format_domain_serial_and_add_one: never lower than the current
+        // serial, so past XX = 99 it carries into the date.
+        var current = parseInt((input.value || '').trim(), 10);
+        var next = parseInt(today + '01', 10);
+        if (!isNaN(current) && current + 1 > next) {
+            next = current + 1;
         }
-        input.value = today + String(xx).padStart(2, '0');
+        input.value = String(next);
     };
 }
 </script>
