@@ -26,7 +26,12 @@ subnet 10.0.3.0 netmask 255.255.255.0 {
 host tut {
 \thardware ethernet f0:de:f1:58:be:1a;
 \tfixed-address tut.edb.technology;
-\tfilename "pxelinux.0";
+\tif substring(option vendor-class-identifier, 0, 20) = "PXEClient:Arch:00007" \
+or substring(option vendor-class-identifier, 0, 20) = "PXEClient:Arch:00009" {
+\t\tfilename "grubx64.efi";
+\t} else {
+\t\tfilename "pxelinux.0";
+\t}
 }
 """
 
@@ -97,6 +102,13 @@ def test_dhcpd_configuration_without_pxe_filename(fixtures):
     conf = DhcpConfig.objects.get().dhcpd_configuration()
     assert "host tut {" in conf
     assert "filename" not in conf
+
+
+def test_dhcpd_configuration_with_custom_pxe_filename(fixtures):
+    Interface.objects.update(pxe_filename="custom.efi")
+    conf = DhcpConfig.objects.get().dhcpd_configuration()
+    assert '\tfilename "custom.efi";\n' in conf
+    assert "vendor-class-identifier" not in conf
 
 
 def test_dhcpd_configuration_without_dynamic_range(fixtures):

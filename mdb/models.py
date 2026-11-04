@@ -6,6 +6,15 @@ from django.utils.translation import gettext_lazy as _
 
 from mdb.validators import validate_hostname, validate_macaddr
 
+# The boot file of a PXE installable host. UEFI x86-64 clients, PXE architecture 7 or 9
+# in their vendor class, get the UEFI loader instead.
+PXE_FILENAME = "pxelinux.0"
+PXE_EFI_FILENAME = "grubx64.efi"
+PXE_EFI_CLIENT = " or ".join(
+    f'substring(option vendor-class-identifier, 0, 20) = "PXEClient:Arch:{arch}"'
+    for arch in ("00007", "00009")
+)
+
 
 class Nameserver(models.Model):
     hostname = models.CharField(max_length=256)
@@ -250,7 +259,15 @@ class DhcpConfig(models.Model):
                 content += (
                     f"\tfixed-address {_if.host.hostname}.{_if.domain.domain_name};\n"
                 )
-                if len(_if.pxe_filename) > 0:
+                if _if.pxe_filename == PXE_FILENAME:
+                    content += (
+                        f"\tif {PXE_EFI_CLIENT} {{\n"
+                        f'\t\tfilename "{PXE_EFI_FILENAME}";\n'
+                        "\t} else {\n"
+                        f'\t\tfilename "{PXE_FILENAME}";\n'
+                        "\t}\n"
+                    )
+                elif _if.pxe_filename:
                     content += f'\tfilename "{_if.pxe_filename}";\n'
                 content += "}\n"
 

@@ -5,7 +5,7 @@ import uuid
 from django.db.models.signals import post_save, pre_delete, pre_save
 from django.dispatch import receiver
 
-from mdb.models import Host, Interface, Ip4Address, Ip4Subnet, Ip6Subnet
+from mdb.models import PXE_FILENAME, Host, Interface, Ip4Address, Ip4Subnet, Ip6Subnet
 from mdb.utils import format_domain_serial_and_add_one
 
 logger = logging.getLogger(__name__)
@@ -85,10 +85,6 @@ def update_domain_serial_when_change_to_host(sender, instance, created, **kwargs
                 subnet.domain_serial
             )
             subnet.save()
-
-
-# The netboot host serves one menu to every machine DHCP sends to pxelinux.
-PXE_FILENAME = "pxelinux.0"
 
 
 @receiver(post_save, sender=Host)
