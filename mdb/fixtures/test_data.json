@@ -2740,9 +2740,6 @@
 },
 {
     "fields": {
-        "pxe_initrd": "path-to-initrd-for-os",
-        "pxe_kernel": "path-to-kernel-for-os",
-        "pxe_preseed_config_url": "http://url-to-preseed.config",
         "arch": "x86_64",
         "name": "Ubuntu",
         "version": "16.04-beta-final"

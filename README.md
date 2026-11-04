@@ -42,5 +42,5 @@ Dump test data:
 
 - Creates DHCPD configuration files
 - Creates DNS zone files for BIND
-- Creates PXE config files (with random secret for use with Puppet autosign)
+- Netboots hosts marked PXE installable, by setting their DHCP boot filename
 - Partial IPv6 support

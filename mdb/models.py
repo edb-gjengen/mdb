@@ -4,7 +4,6 @@ import ipaddress
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from mdb.pxe import host_as_pxe_files
 from mdb.validators import validate_hostname, validate_macaddr
 
 
@@ -500,10 +499,6 @@ class OperatingSystem(models.Model):
         max_length=255, choices=OS_ARCHITECTURES, blank=True, null=True
     )
 
-    pxe_kernel = models.CharField(max_length=255, blank=True, null=True)
-    pxe_initrd = models.CharField(max_length=255, blank=True, null=True)
-    pxe_preseed_config_url = models.URLField(blank=True, null=True)
-
     def __str__(self):
         return self.name + " " + self.version + " (" + self.arch + ")"
 
@@ -539,9 +534,6 @@ class Host(models.Model):
 
     def __str__(self):
         return self.hostname
-
-    def as_pxe_files(self):
-        return host_as_pxe_files(self)
 
 
 class Interface(models.Model):

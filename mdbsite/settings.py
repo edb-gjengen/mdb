@@ -123,12 +123,6 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
 }
 
-# PXE
-MDB_PXE_TFTP_ROOT = "/var/lib/tftpboot/pxelinux/pxelinux.cfg/"
-MDB_PXE_KERNEL = "ubuntu/14_04/amd64/alternate/linux"
-MDB_PXE_INITRD = "ubuntu/14_04/amd64/alternate/initrd.gz"
-MDB_PXE_PRESEED_URL = "http://158.36.190.194/ubuntu/preseed_1404.cfg"
-
 # Sentry
 SENTRY_DSN = os.getenv("SENTRY_DSN")
 SENTRY_ENVIRONMENT = os.getenv("SENTRY_ENVIRONMENT", "dev")

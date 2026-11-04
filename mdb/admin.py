@@ -322,9 +322,6 @@ class OperatingSystemAdmin(admin.ModelAdmin):
         "name",
         "version",
         "arch",
-        "pxe_kernel",
-        "pxe_initrd",
-        "pxe_preseed_config_url",
     ]
 
 

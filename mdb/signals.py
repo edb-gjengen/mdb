@@ -1,9 +1,7 @@
 import ipaddress
 import logging
-import os
 import uuid
 
-from django.conf import settings
 from django.db.models.signals import post_save, pre_delete, pre_save
 from django.dispatch import receiver
 
@@ -89,10 +87,14 @@ def update_domain_serial_when_change_to_host(sender, instance, created, **kwargs
             subnet.save()
 
 
+# The netboot host serves one menu to every machine DHCP sends to pxelinux.
+PXE_FILENAME = "pxelinux.0"
+
+
 @receiver(post_save, sender=Host)
-def create_pxe_key_and_write_pxe_files_when_host_changes(
-    sender, instance, created, **kwargs
-):
+def set_pxe_boot_when_host_changes(sender, instance, created, **kwargs):
+    """An installable host netboots into the menu; unticking it stops that.
+    A filename other than pxelinux's is left alone either way."""
     host = instance
 
     if not host.pxe_key:
@@ -101,35 +103,20 @@ def create_pxe_key_and_write_pxe_files_when_host_changes(
         Host.objects.filter(pk=host.pk).update(pxe_key=pxe_key)
         host.pxe_key = pxe_key
 
-    for pxe_file_name, pxe_file in host.as_pxe_files():
-        path = os.path.join(settings.MDB_PXE_TFTP_ROOT, pxe_file_name)
+    for _if in host.interface_set.exclude(ip4address__isnull=True):
+        changed = False
         if host.pxe_installable:
-            # Write pxeconfig file to disk
-            with open(path, "w+") as f:
-                f.write(pxe_file)
-                logger.info(f"Created or updated {path}")
-            os.chmod(path, 0o644)  # Not writeable for all
-
-            # Also set necessary fields for pxe installation
-            interfaces = host.interface_set.exclude(ip4address__isnull=True)
-
-            for _if in interfaces:
-                changed = False
-                if not _if.pxe_filename:
-                    _if.pxe_filename = "pxelinux.0"  # don't overwrite
-                    changed = True
-                if not _if.dhcp_client:
-                    _if.dhcp_client = True
-                    changed = True
-
-                if changed:
-                    _if.save()
-
-        else:
-            if os.path.exists(path):
-                # Delete pxeconfig file from disk
-                os.unlink(path)
-                logger.info(f"deleted {path}")
+            if not _if.pxe_filename:
+                _if.pxe_filename = PXE_FILENAME
+                changed = True
+            if not _if.dhcp_client:
+                _if.dhcp_client = True
+                changed = True
+        elif _if.pxe_filename == PXE_FILENAME:
+            _if.pxe_filename = ""
+            changed = True
+        if changed:
+            _if.save()
 
 
 @receiver(pre_delete, sender=Interface)
